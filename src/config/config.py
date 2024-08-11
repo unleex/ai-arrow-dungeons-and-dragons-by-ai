@@ -1,3 +1,4 @@
+import httpx
 from typing import Any
 
 from environs import Env
@@ -12,5 +13,11 @@ def config() -> dict[str, Any]:
     BOT_TOKEN: str = env("BOT_TOKEN")
     bot: Bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="markdown"))
     dp = Dispatcher()
-    openai_client = OpenAI()
-    return {"bot": bot, "dp": dp, "openai_client": openai_client}
+    PROXY_URL = env("PROXY_URL")
+    if PROXY_URL:
+        openai_client = OpenAI(http_client=httpx.Client(proxy=PROXY_URL))
+    else:
+        openai_client = OpenAI()
+    return {"bot": bot, 
+            "dp": dp, 
+            "openai_client": openai_client}
