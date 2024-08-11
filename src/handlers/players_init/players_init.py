@@ -15,13 +15,7 @@ prompts = PROMPTS_RU
 rt = Router()
 
 
-@rt.message(Command("dnd"), StateFilter(default_state))
-async def DnD_init_handler(msg: Message, state: FSMContext):
-    await msg.answer(lexicon["DnD_init"])
-    await state.set_state(FSMStates.DnD_init)
-
-
-@rt.message(StateFilter(FSMStates.DnD_init))
+@rt.message(StateFilter(FSMStates.creating_heroes))
 async def DnD_generating_adventure(msg: Message, state: FSMStates, openai_client: OpenAI):
     MAX_TOKENS = 1000
     await msg.answer(lexicon["DnD_generating_adventure"])
