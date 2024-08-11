@@ -3,6 +3,9 @@ LEXICON_RU = {
 "DnD_command_description":
 """Начните игру DnD!
 """,
+"cancel_command_description":
+"""Отмена действий
+""",
 ##############
 "not_in_group":
 """*Добро пожаловать на просторы Dungeons and Dragons!*
@@ -24,7 +27,19 @@ LEXICON_RU = {
 Вперед, исследователи!
 """,
 "DnD_generating_adventure":
-"""Хмм.. звучит интересно! Дайте подумать...
+"""Хмм.. звучит интересно! Дайте подумать минутку...
 """,
+"DnD_is_adventure_ok":
+"""Понравилось?""",
+"DnD_is_adventure_ok_yes_butt":
+"""✅Да!""",
+"DnD_is_adventure_ok_no_butt":
+"""❌Нет, переделывай""",
+"DnD_is_adventure_ok_no":
+"""Хорошо, вот еще идея:""",
+"DnD_adventure_tried_all_choices":
+"""Это были все мои идеи. Попробуйте написать подробнее, и/или добавить больше конкретики.""",
+"cancel_handler":
+"""Действия отменены."""
 
 }

@@ -1,4 +1,4 @@
-from config.config import config 
+from config.config import bot 
 from lexicon.lexicon import LEXICON_RU
 
 from aiogram import Bot
@@ -9,8 +9,9 @@ lexicon = LEXICON_RU
 
 
 async def set_main_menu():
-    bot: Bot = config()["bot"]
     main_menu = [
+        BotCommand(command="cancel",
+                   description=lexicon["cancel_command_description"]),
         BotCommand(command="dnd",
                    description=lexicon["DnD_command_description"])
     ]
