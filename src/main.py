@@ -1,6 +1,7 @@
 import asyncio
 
 from config.config import config as configure
+from handlers.other_handlers import other_handlers
 
 from aiogram import Bot, Dispatcher
 from openai import OpenAI
@@ -11,7 +12,9 @@ async def main():
     bot: Bot = config["bot"]
     dp: Dispatcher = config["dp"]
     openai_client: OpenAI = config["openai_client"]
-    await bot.send_message(1547173190, "Hello world!")
+
+    dp.include_router(other_handlers.rt)
+
     await dp.start_polling(bot)
 
 
