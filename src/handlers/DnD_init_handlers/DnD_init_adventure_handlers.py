@@ -9,15 +9,12 @@ from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import default_state
 from aiogram.types import CallbackQuery, Message
-from openai import OpenAI
-from openai.types.chat import ChatCompletion
 
 
 lexicon = LEXICON_RU
 prompts = PROMPTS_RU
 rt = Router()
 MAX_TOKENS = 1000
-N_CHOICES = 3
 
 
 @rt.message(Command("dnd"), StateFilter(default_state))
@@ -34,7 +31,7 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, tran
         max_tokens=MAX_TOKENS,
         temperature=1,
         messages = [
-            {"role": "user", "content": prompts["DnD_generating_adventure"] % msg.text}
+            {"role": "user", "content": prompts["DnD_generating_lore"] % msg.text}
         ]
     )
     await msg.answer(completion.choices[0].message.content.translate(translate_dict)
@@ -51,7 +48,7 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, tran
 @rt.callback_query(F.data=="DnD_is_adventure_ok_yes", StateFilter(FSMStates.DnD_is_adventure_ok_choosing))
 async def DnD_is_adventure_ok_yes_handler(clb: CallbackQuery, state: FSMContext):
     await clb.message.answer(lexicon['DnD_init_players'])
-    await state.set_state(FSMStates.DnD_init_players)
+    await state.set_state(FSMStates.creating_heroes)
 
 
 

@@ -2,4 +2,9 @@ from aiogram.fsm.state import State, StatesGroup
 
 
 class FSMStates(StatesGroup):
-    DnD_init = State()
+    creating_heroes = State()
+    DnD_is_adventure_ok_choosing = State()
+    DnD_default_state = State()
+    DnD_in_mission = State()
+    DnD_taking_action = State()
+    DnD_took_action = State()
