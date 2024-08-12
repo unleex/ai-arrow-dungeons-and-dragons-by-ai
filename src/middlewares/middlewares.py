@@ -22,7 +22,7 @@ class DataBaseAccessor(BaseMiddleware):
         if str(chat.id) in db.keys():
             data['chat_data'] =  db[str(chat.id)]
         else:
-            db[str(chat.id)] = {"name": [], "description": '', "users": {}}
+            db[str(chat.id)] = {"description_history": [], "users": {}}
             logger.info(f"New chat: {str(chat.id)}.\nInfo: {chat.active_usernames}\n{chat.bio}")
             data['chat_data'] =  db[str(chat.id)]
 
