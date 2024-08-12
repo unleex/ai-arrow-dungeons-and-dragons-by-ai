@@ -3,7 +3,7 @@ import asyncio
 from config.config import config as configure
 from handlers.other_handlers import other_handlers
 from handlers.DnD_init_handlers import DnD_init_handlers
-from handlers.players_init import players_init
+from handlers.DnD_init_handlers import players_init
 from keyboards.set_menu import set_main_menu
 from middlewares.middlewares import DataBaseAccessor
 

@@ -50,8 +50,8 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, tran
 
 @rt.callback_query(F.data=="DnD_is_adventure_ok_yes", StateFilter(FSMStates.DnD_is_adventure_ok_choosing))
 async def DnD_is_adventure_ok_yes_handler(clb: CallbackQuery, state: FSMContext):
-    await clb.message.answer(lexicon['DnD_init_players'])
-    await state.set_state(FSMStates.DnD_init_players)
+    await clb.message.answer(lexicon['amount_of_players'])
+    await state.set_state(FSMStates.get_number_of_players)
 
 
 
