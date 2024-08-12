@@ -21,7 +21,7 @@ async def counting_players(msg: Message, state: FSMContext):
         await msg.answer(lexicon['amount_of_players'])
     else:
         await msg.answer(lexicon["DnD_init_players"])
-        await state.set_state(FSMStates.getting_amount_of_players)
+        await state.set_state(FSMStates.creating_heroes)
         ctx = await state.get_data()
         ctx["number_of_players"] = msg.text
         await state.set_data(ctx)
@@ -38,4 +38,4 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
         await msg.answer(lexicon['game_started'])
         await state.set_state(FSMStates.DnD_game_started)
     else:
-        await msg.answer(lexicon["wait_other_players"])
+        await msg.answer(lexicon["wait_other_players"].format(name=msg.from_user.first_name))
