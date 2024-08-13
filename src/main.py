@@ -1,7 +1,7 @@
 import asyncio
 
 from config.config import bot, dp
-from handlers.other_handlers import other_handlers
+from handlers import other_handlers
 from handlers.DnD_init_handlers import DnD_init_adventure_handlers, players_init
 from keyboards.set_menu import set_main_menu
 from middlewares.middlewares import DataBaseAccessor
