@@ -1,9 +1,9 @@
 import asyncio
 
-from config.config import bot, dp, openai_client
+from config.config import bot, dp
 from handlers.DnD_init_handlers import DnD_init_adventure_handlers
-from handlers.DnD_init_handlers import players_init_handlers
 from handlers.other_handlers import other_handlers
+from handlers.DnD_init_handlers import DnD_init_adventure_handlers, players_init
 from keyboards.set_menu import set_main_menu
 from middlewares.middlewares import DataBaseAccessor
 
@@ -16,7 +16,7 @@ async def main():
 
     dp.include_router(other_handlers.rt)
     dp.include_router(DnD_init_adventure_handlers.rt)
-    dp.include_router(players_init_handlers.rt)
+    dp.include_router(players_init.rt)
     dp.update.middleware(DataBaseAccessor())
     print("starting...")
     await bot.delete_webhook(drop_pending_updates=True)

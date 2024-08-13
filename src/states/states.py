@@ -9,3 +9,5 @@ class FSMStates(StatesGroup):
     DnD_in_mission = State()
     DnD_taking_action = State()
     DnD_took_action = State()
+    getting_amount_of_players = State()
+    DnD_game_started = State()

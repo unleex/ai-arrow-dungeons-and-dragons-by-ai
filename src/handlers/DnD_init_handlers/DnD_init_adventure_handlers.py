@@ -26,16 +26,16 @@ async def DnD_init_handler(msg: Message, state: FSMContext):
 @rt.message(StateFilter(FSMStates.generating_adventure))
 async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, translate_dict):
     await msg.answer(lexicon["DnD_generating_adventure"])
-    completion = openai_client.chat.completions.create(
-        model="gpt-4",
-        max_tokens=MAX_TOKENS,
-        temperature=1,
-        messages = [
-            {"role": "user", "content": prompts["DnD_generating_lore"] % msg.text}
-        ]
-    )
-    await msg.answer(completion.choices[0].message.content.translate(translate_dict)
-    ) # translate to restrict model using markdown chars, avoiding bugs
+    # completion = openai_client.chat.completions.create(
+    #     model="gpt-4",
+    #     max_tokens=MAX_TOKENS,
+    #     temperature=1,
+    #     messages = [
+    #         {"role": "user", "content": prompts["DnD_generating_lore"] % msg.text}
+    #     ]
+    # )
+    # await msg.answer(completion.choices[0].message.content.translate(translate_dict)
+    # ) # translate to restrict model using markdown chars, avoiding bugs
     await msg.answer(lexicon["DnD_is_adventure_ok"],
                      reply_markup=DnD_is_adventure_ok_kb,
                      resize_keyboard=True)
@@ -47,8 +47,9 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, tran
 
 @rt.callback_query(F.data=="DnD_is_adventure_ok_yes", StateFilter(FSMStates.DnD_is_adventure_ok_choosing))
 async def DnD_is_adventure_ok_yes_handler(clb: CallbackQuery, state: FSMContext):
-    await clb.message.answer(lexicon['DnD_init_players'])
-    await state.set_state(FSMStates.creating_heroes)
+    await clb.message.answer(lexicon['amount_of_players'])
+    await state.set_state(FSMStates.getting_amount_of_players)
+
 
 
 @rt.callback_query(F.data=="DnD_is_adventure_ok_no", StateFilter(FSMStates.DnD_is_adventure_ok_choosing))

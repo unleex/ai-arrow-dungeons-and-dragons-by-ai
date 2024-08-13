@@ -1,7 +1,11 @@
-from lexicon.lexicon import LEXICON_RU
+import json
 
+from aiogram.methods.get_chat_member import GetChatMember
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from config.config import bot
+from lexicon.lexicon import LEXICON_RU
 
 lexicon = LEXICON_RU
 
