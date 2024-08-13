@@ -87,5 +87,9 @@ LEXICON_RU = {
 "extracting_hero_data":
 """Так, сейчас запишу, подождите""",
 "extracted_hero_data":
-"""Да, записал"""
+"""Да, записал""",
+"master_answering":
+"""
+%s...
+"""
 }

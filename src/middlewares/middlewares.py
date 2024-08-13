@@ -37,7 +37,7 @@ class DataBaseAccessor(BaseMiddleware):
             result = await handler(event, data)
         except Exception as e:
             result = e
-            print(e)
+            print(f"Exception: {e}")
 
         with open('src/db/chat_database.json', mode='w') as fp:
             json.dump(db, fp, indent='\t')
