@@ -20,6 +20,7 @@ MAX_TOKENS = 1000
 @rt.message(Command("dnd"), StateFilter(default_state))
 async def DnD_init_handler(msg: Message, state: FSMContext, chat_data: dict):
     chat_data["heroes"] = {}
+    chat_data["adventure_lore"] = ""
     await msg.answer(lexicon["DnD_init"])
     await state.set_state(FSMStates.generating_adventure)
 
@@ -35,7 +36,7 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, tran
     #         {"role": "user", "content": prompts["DnD_generating_lore"] % msg.text}
     #     ]
     # )
-    # result = completion.choices[0].message.content.translate(translate_dict)
+    #result = completion.choices[0].message.content.translate(translate_dict)
     result = """Недавно, Элгар, несчастный зять древнего клана магов, обнаружил что-то необычное в шкафу своей свекрови. Там глубоко спрятаны были драгоценности и редкие артефакты, а ещё несколько старинных свитков. Элгар, увлекшись изучением свитков, обнаружил, что те были дневниками Мелиндры, предка своей жены и мощного мага, битву с которым вспоминали по всему королевству.
 Мелиндра всю жизнь была фанатично увлечена драконами. Она изучала их природу, потребности, образ жизни, и даже смогла наладить контакт с некоторыми из них. Однако, под влиянием злого чародея, она была обманута, и её знания и исследования были использованы для неправильных целей. Злодей превратил драконов в свою личную армию, и развязал войну против королевства.
 Чуя измену, Мелиндра подступила к злодею и наложила на него проклятие, которое приковало его душу к шкафу. Однако, вступив в схватку с могущественным драконом, Мелиндра погибла, не успев рассказать о своем замысле другим магам клана.
