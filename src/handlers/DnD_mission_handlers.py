@@ -75,7 +75,6 @@ async def adding_action(msg: Message, state: FSMContext, chat_data: dict):
     await taking_action(msg, state, chat_data)
 
 
-#TODO: check if user doesn't say the sentence and prompt him to send it in next message
 @rt.message(Command("/master"), StateFilter(FSMStates.DnD_taking_action))
 async def master(msg: Message, state: FSMContext, chat_data: dict):
     topic = msg.text.replace("/master", '').replace(BOT_USERNAME,'')

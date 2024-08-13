@@ -53,6 +53,7 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
     hero_data = eval(data)
     chat_data['heroes'][str(msg.from_user.id)] = hero_data
     await msg.answer(lexicon["extracted_hero_data"])
+    # TODO: unnest
     if len(chat_data['heroes']) == ctx['number_of_players']:
         await msg.answer(lexicon['game_started'])
         await msg.answer(lexicon["generating_starting_location"])
