@@ -1,4 +1,5 @@
 from lexicon.lexicon import LEXICON_RU
+from states.states import FSMStates
 
 from aiogram import Router, F
 from aiogram.filters import Command, StateFilter
@@ -17,6 +18,7 @@ async def not_in_group_handler(msg: Message):
 
 
 @rt.message(Command("cancel"), StateFilter(any_state))
-async def cancel_handler(msg: Message, state: FSMContext):
+async def cancel_handler(msg: Message):
     await msg.answer(lexicon["cancel_handler"])
-    await state.clear()
+    await FSMStates.clear_chat_data(msg.chat.id)
+    await FSMStates.clear_chat_state(msg.chat.id)
