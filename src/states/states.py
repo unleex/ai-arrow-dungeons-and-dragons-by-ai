@@ -17,6 +17,8 @@ class FSMStates(StatesGroup):
     DnD_took_action = State()
     getting_amount_of_players = State()
     DnD_game_started = State()
+    DnD_adding_action = State()
+    DnD_adding_master = State()
 
     @staticmethod
     async def set_chat_state(chat_id: int, state: State | None):
