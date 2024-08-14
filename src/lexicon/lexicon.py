@@ -91,5 +91,7 @@ LEXICON_RU = {
 "master_answering":
 """
 %s...
-"""
+""",
+"already_took_action":
+"""%s, ты уже совершил свое действие, подожди других игроков"""
 }

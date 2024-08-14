@@ -32,9 +32,9 @@ async def counting_players(msg: Message, state: FSMContext):
 @rt.message(StateFilter(FSMStates.creating_heroes))
 async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
     ctx = await state.get_data()
-    if ctx.get("extracting_hero_data", False):
-        return # processing more heroes while generating may cause errors
-    ctx["extracting_hero_data"] = True
+    if ctx.get("prompt_sent", False):
+        return # don't let user access gpt while already processing
+    ctx["prompt_sent"] = True
     await state.set_data(ctx)
     if str(msg.from_user.id) in chat_data['heroes']:
         await msg.answer(lexicon['already_in_db'].format(name=msg.from_user.first_name))
@@ -48,6 +48,8 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
                 {"role": "user", "content": prompts["extract_hero_data"] % msg.text}
             ]
         )  
+    ctx["prompt_sent"] = False
+    await state.set_data(ctx)
     result = completion.choices[0].message.content
     data = result[result.find('{'): result.find('}') + 1]
     hero_data = eval(data)

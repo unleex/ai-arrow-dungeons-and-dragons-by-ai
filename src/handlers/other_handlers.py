@@ -22,3 +22,11 @@ async def cancel_handler(msg: Message):
     await msg.answer(lexicon["cancel_handler"])
     await FSMStates.clear_chat_data(msg.chat.id)
     await FSMStates.clear_chat_state(msg.chat.id)
+
+
+@rt.message(Command("set_state"))
+async def set_state(msg: Message, state: FSMContext):
+    st = msg.text.replace('/set_state', '').strip()
+    await msg.answer(f"setting state {st}")
+    await state.set_state(eval(f"FSMStates.{st}"))
+    print(f"new state: {await state.get_state()}")
