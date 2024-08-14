@@ -54,7 +54,7 @@ async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
         await msg.answer(lexicon["action_empty"])
         await state.set_state(FSMStates.DnD_adding_action)  
         return
-    ctx["prompt_sent"] = True
+    ctx["prompt_sent"] = True   
     await state.set_data(ctx)
     await msg.answer(lexicon["master_answering"] % chat_data["heroes"][str(msg.from_user.id)]["name"])
     completion = openai_client.chat.completions.create(
@@ -64,7 +64,7 @@ async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
          messages = [
             {"role": "user", 
              "content": prompts["DnD_taking_action"].format(
-                action=msg.text,
+                action=topic,
                 recent_actions='\n'.join(
                 chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]),
                 hero_data=chat_data["heroes"][str(msg.from_user.id)])}
@@ -105,7 +105,7 @@ async def master(msg: Message, state: FSMContext, chat_data: dict):
          messages = [
             {"role": "user", 
              "content": prompts["DnD_master"].format(
-                phrase=msg.text,
+                phrase=topic,
                 recent_actions='\n'.join(
                 chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]),
                 hero_data=chat_data["heroes"][str(msg.from_user.id)])} 
@@ -124,5 +124,5 @@ async def adding_master(msg: Message, state: FSMContext, chat_data: dict):
 
 
 @rt.message(StateFilter(FSMStates.DnD_took_action))
-async def already_took_action(msg: Message, chat_data: dict):
-    await msg.answer(lexicon["already_took_action"] % chat_data["heroes"][str(msg.from_user.id)])
+async def already_took_action(msg: Message, chat_data: dict):   
+    await msg.answer(lexicon["already_took_action"] % chat_data["heroes"][str(msg.from_user.id)]["name"])
