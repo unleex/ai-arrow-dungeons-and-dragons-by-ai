@@ -4,4 +4,3 @@ test.py
 *__pycache__
 venv/
 dump.rdb
-src/db/chat_database.json
