@@ -2,6 +2,7 @@ from config.config import openai_client
 from keyboards.keyboards import DnD_is_adventure_ok_kb
 from lexicon.lexicon import LEXICON_RU
 from prompts.prompts import PROMPTS_RU
+from prompts.functions import request_to_chatgpt
 from states.states import FSMStates
 
 from aiogram import F, Router
@@ -60,15 +61,8 @@ async def DnD_is_adventure_ok_yes_handler(clb: CallbackQuery, state: FSMContext)
 @rt.callback_query(F.data=="DnD_is_adventure_ok_no", StateFilter(FSMStates.DnD_is_adventure_ok_choosing))
 async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, translate_dict: dict, chat_data: dict):
     await clb.message.answer(lexicon["DnD_is_adventure_ok_no"])
-    completion = openai_client.chat.completions.create(
-        model="gpt-4",
-        max_tokens=MAX_TOKENS,
-        temperature=1,
-        messages = [
-            {"role": "user", "content": prompts["DnD_generating_lore"] % chat_data["adventure_lore"]}
-        ]
-    )
-    await clb.message.answer(completion.choices[0].message.content.translate(translate_dict)
+    completion = request_to_chatgpt(content=prompts["DnD_generating_lore"] % chat_data["adventure_lore"])
+    await clb.message.answer(completion.translate(translate_dict)
     ) # translate to restrict model using markdown chars, avoiding bugs
     await clb.message.answer(lexicon["DnD_is_adventure_ok"],
                      reply_markup=DnD_is_adventure_ok_kb,

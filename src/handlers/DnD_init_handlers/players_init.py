@@ -1,6 +1,7 @@
 from config.config import bot, openai_client
 from lexicon.lexicon import LEXICON_RU
 from prompts.prompts import PROMPTS_RU
+from prompts.functions import request_to_chatgpt
 from states.states import FSMStates
 
 from aiogram import Router
@@ -36,38 +37,27 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
         return # don't let user access gpt while already processing
     ctx["prompt_sent"] = True
     await state.set_data(ctx)
+
     if str(msg.from_user.id) in chat_data['heroes']:
         await msg.answer(lexicon['already_in_db'].format(name=msg.from_user.first_name))
         return
     await msg.answer(lexicon["extracting_hero_data"])
-    completion = openai_client.chat.completions.create(
-            model="gpt-4",
-            max_tokens=MAX_TOKENS,
-            temperature=1,
-            messages = [
-                {"role": "user", "content": prompts["extract_hero_data"] % msg.text}
-            ]
-        )  
-    result = completion.choices[0].message.content
+    result = request_to_chatgpt(content=prompts["extract_hero_data"] % msg.text)
     data = result[result.find('{'): result.find('}') + 1]
     hero_data = eval(data)
     hero_data["health"] = 100
     chat_data['heroes'][str(msg.from_user.id)] = hero_data
     await msg.answer(lexicon["extracted_hero_data"])
+
+
     # TODO: unnest
     if len(chat_data['heroes']) == ctx['number_of_players']:
         
         await msg.answer(lexicon['game_started'])
         await msg.answer(lexicon["generating_starting_location"])
-        completion = openai_client.chat.completions.create(
-            model="gpt-4",
-            max_tokens=MAX_TOKENS,
-            temperature=1,
-            messages = [
-                {"role": "user", "content": prompts["DnD_init_location"] % chat_data["adventure_lore"]}
-            ]
-        )   
-        location = completion.choices[0].message.content
+
+        location = request_to_chatgpt(content=prompts["DnD_init_location"] % chat_data["adventure_lore"])
+
         await msg.answer(location)
         await msg.answer(lexicon["take_action"])
         await FSMStates.set_chat_state(msg.chat.id, FSMStates.DnD_taking_action)
