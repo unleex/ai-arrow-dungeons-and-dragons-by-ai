@@ -38,6 +38,17 @@ class FSMStates(StatesGroup):
             ctx = FSMContext(storage,new_storage_key)
             await ctx.set_data(data)
 
+    @staticmethod 
+    async def get_chat_states(chat_id: int):
+        states = {}
+        with open("src/db/chat_database.json") as f:
+            db = json.load(f)
+        for user_id in db[str(chat_id)]["users"]:
+            new_storage_key = StorageKey(int(bot.id), int(chat_id), int(user_id))
+            ctx = FSMContext(storage,new_storage_key)
+            states[user_id] = await ctx.get_state()
+        return states
+
     @staticmethod
     async def clear_chat_data(chat_id: int):
         await FSMStates.set_chat_data(chat_id, {})

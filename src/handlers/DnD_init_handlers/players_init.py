@@ -48,15 +48,15 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
                 {"role": "user", "content": prompts["extract_hero_data"] % msg.text}
             ]
         )  
-    ctx["prompt_sent"] = False
-    await state.set_data(ctx)
     result = completion.choices[0].message.content
     data = result[result.find('{'): result.find('}') + 1]
     hero_data = eval(data)
+    hero_data["health"] = 100
     chat_data['heroes'][str(msg.from_user.id)] = hero_data
     await msg.answer(lexicon["extracted_hero_data"])
     # TODO: unnest
     if len(chat_data['heroes']) == ctx['number_of_players']:
+        
         await msg.answer(lexicon['game_started'])
         await msg.answer(lexicon["generating_starting_location"])
         completion = openai_client.chat.completions.create(
@@ -73,5 +73,6 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
         await FSMStates.set_chat_state(msg.chat.id, FSMStates.DnD_taking_action)
         for user_id in chat_data["heroes"]:
             chat_data["heroes"][user_id]["location"] = location
+        await state.set_data({})
     else:
         await msg.answer(lexicon["wait_other_players"] % msg.from_user.first_name)

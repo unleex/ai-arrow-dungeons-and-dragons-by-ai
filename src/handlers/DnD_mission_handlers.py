@@ -8,6 +8,7 @@ from random import randint
 from aiogram import Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State
 from aiogram.types import Message
 
 
@@ -46,6 +47,8 @@ async def maybe_generate_mission(msg: Message, state: FSMContext, translate_dict
 #TODO: check if user doesn't say the action and prompt him to send it in next message
 @rt.message(Command("action"), StateFilter(FSMStates.DnD_taking_action))
 async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
+    if str(msg.from_user.id) not in chat_data["heroes"]:
+        return
     ctx = await state.get_data()
     if ctx.get("prompt_sent", False):
         return # don't let user access gpt while already processing
@@ -75,8 +78,45 @@ async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
     result = completion.choices[0].message.content
     chat_data["actions"].append(topic)
     chat_data["actions"].append(result)
+    completion = openai_client.chat.completions.create(
+        model="gpt-4",
+        max_tokens=MAX_TOKENS,
+        temperature=1,
+         messages = [
+            {"role": "user", 
+             "content": prompts["update_after_action"].format(
+                 action=topic, 
+                 hero_data=chat_data["heroes"][str(msg.from_user.id)])}
+        ]
+    )
+    updated = completion.choices[0].message.content
+    data = updated[updated.find('{'): updated.rfind('}') + 1]
+    hero_data = eval(data)
+    print(updated)
+    hero_data["health"] = min(100, hero_data["health"])
+    chat_data["heroes"][str(msg.from_user.id)] = hero_data
     await msg.answer(result)
     await state.set_state(FSMStates.DnD_took_action)
+    states: dict[str, str] = await FSMStates.get_chat_states(str(msg.chat.id))
+    if all([st == "FSMStates:" + FSMStates.DnD_took_action._state for st in list(states.values())]):
+        await msg.answer(lexicon["next_turn"])
+        completion = openai_client.chat.completions.create(
+            model="gpt-4",
+            max_tokens=MAX_TOKENS,
+            temperature=1,
+            messages = [
+                {"role": "user", 
+                "content": prompts["DnD_taking_action"].format(
+                    action=topic,
+                    hero_data=chat_data["heroes"][str(msg.from_user.id)],
+                    recent_actions='\n'.join(
+                        chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]
+                        ))} 
+                ]
+        )
+        await msg.answer(completion.choices[0].message.content)
+        await msg.answer(lexicon["take_action"])
+        await FSMStates.set_chat_state(msg.chat.id, FSMStates.DnD_taking_action)
 
 
 @rt.message(StateFilter(FSMStates.DnD_adding_action))
@@ -87,6 +127,8 @@ async def adding_action(msg: Message, state: FSMContext, chat_data: dict):
 #TODO: append result and prompt to actions  
 @rt.message(Command("master"), StateFilter(FSMStates.DnD_taking_action))
 async def master(msg: Message, state: FSMContext, chat_data: dict):
+    if str(msg.from_user.id) not in chat_data["heroes"]:
+        return
     ctx = await state.get_data()
     if ctx.get("prompt_sent", False):
         return # don't let user access gpt while already processing
