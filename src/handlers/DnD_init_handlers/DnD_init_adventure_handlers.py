@@ -1,5 +1,6 @@
 from config.config import openai_client
 from keyboards.keyboards import DnD_is_adventure_ok_kb
+from keyboards.set_menu import set_game_menu
 from lexicon.lexicon import LEXICON_RU
 from prompts.prompts import PROMPTS_RU
 from prompts.functions import request_to_chatgpt
@@ -20,6 +21,7 @@ MAX_TOKENS = 1000
 
 @rt.message(Command("dnd"), StateFilter(default_state))
 async def DnD_init_handler(msg: Message, state: FSMContext, chat_data: dict):
+    await set_game_menu(msg.chat.id)
     chat_data["heroes"] = {}
     chat_data["adventure_lore"] = ""
     await msg.answer(lexicon["DnD_init"])
