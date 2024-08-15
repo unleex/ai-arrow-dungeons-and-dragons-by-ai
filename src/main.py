@@ -1,4 +1,6 @@
 import asyncio
+import logging
+import logging.config
 
 from config.config import bot, dp
 from handlers import DnD_mission_handlers
@@ -9,6 +11,7 @@ from middlewares.middlewares import DataBaseAccessor
 
 
 async def main():
+    logging.basicConfig(level=logging.DEBUG)
     translate_syms_dict = {'*':'','_': '', '<': '', '>': '', '/': ''}
     dp['translate_dict'] = translate_syms_dict
 

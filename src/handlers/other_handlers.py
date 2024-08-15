@@ -32,3 +32,9 @@ async def set_state(msg: Message, state: FSMContext):
     await msg.answer(f"setting state {st}")
     await state.set_state(eval(f"FSMStates.{st}"))
     print(f"new state: {await state.get_state()}")
+
+
+@rt.message(Command("get_states"))
+async def get_states(msg: Message):
+    states = await FSMStates.get_chat_states(msg.chat.id)
+    await msg.answer(str(states))

@@ -1,5 +1,6 @@
 from keyboards.set_menu import set_game_menu
 from lexicon.lexicon import LEXICON_RU
+from prompts.functions import request_to_chatgpt
 from prompts.prompts import PROMPTS_RU
 from states.states import FSMStates
 
@@ -35,15 +36,17 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
     ctx["prompt_sent"] = True
     await state.set_data(ctx)
 
-    # if str(msg.from_user.id) in chat_data['heroes']:
-    #     await msg.answer(lexicon['already_in_db'].format(name=msg.from_user.first_name))
-    #     return
-    # await msg.answer(lexicon["extracting_hero_data"])
-    # result = request_to_chatgpt(content=prompts["extract_hero_data"] % msg.text)
-    # data = result[result.find('{'): result.find('}') + 1]
-    # hero_data = eval(data)
-    # hero_data["health"] = 100
-    # chat_data['heroes'][str(msg.from_user.id)] = hero_data
+    if str(msg.from_user.id) in chat_data['heroes']:
+        await msg.answer(lexicon['already_in_db'].format(name=msg.from_user.first_name))
+        return
+    await msg.answer(lexicon["extracting_hero_data"])
+    result = request_to_chatgpt(content=prompts["extract_hero_data"] % msg.text)
+    ctx["prompt_sent"] = False
+    await state.set_data(ctx)
+    data = result[result.find('{'): result.find('}') + 1]
+    hero_data = eval(data)
+    hero_data["health"] = 100
+    chat_data['heroes'][str(msg.from_user.id)] = hero_data
     await msg.answer(lexicon["extracted_hero_data"])
 
 
@@ -54,11 +57,11 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
         await msg.answer(lexicon["generating_starting_location"])
         await set_game_menu(msg.chat.id)
 
-        #data = request_to_chatgpt(content=prompts["DnD_init_location"] % chat_data["lore"])
-        data = """{
-  "location": "Крепость последних магов, расположенная в древнем лесу посреди таинственных топей.",
-  "explanation": "Вы находитесь в таинственном древнем лесу, где густые вековые деревья пронизаны таинственным шепотом. Перед вами возвышается крепость последних магов, огромная строение, вырубленное из прочного камня и украшенное золотыми драгоценностями. В глубине дворца, в одной из темных комнат, стоит таинственный шкаф, отдавая окружающую среду аурой чар и магической энергии. Это место, где вы будете разгадывать тайны древних свитков, изучать любопытные артефакты и подготавливаться к предстояющей войне с драконами."
-}"""
+        data = request_to_chatgpt(content=prompts["DnD_init_location"] % chat_data["lore"])
+#         data = """{
+#   "location": "Крепость последних магов, расположенная в древнем лесу посреди таинственных топей.",
+#   "explanation": "Вы находитесь в таинственном древнем лесу, где густые вековые деревья пронизаны таинственным шепотом. Перед вами возвышается крепость последних магов, огромная строение, вырубленное из прочного камня и украшенное золотыми драгоценностями. В глубине дворца, в одной из темных комнат, стоит таинственный шкаф, отдавая окружающую среду аурой чар и магической энергии. Это место, где вы будете разгадывать тайны древних свитков, изучать любопытные артефакты и подготавливаться к предстояющей войне с драконами."
+# }"""
         try:
             data = eval(data)
         except Exception as e:

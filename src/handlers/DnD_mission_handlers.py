@@ -111,17 +111,21 @@ async def rolling(clb: CallbackQuery, state: FSMContext, chat_data: dict):
     await state.set_data(ctx)
 
 
-@rt.message(Command("master"), StateFilter(FSMStates.DnD_taking_action))
+@rt.message(Command("master"), StateFilter(FSMStates.DnD_taking_action, FSMStates.DnD_took_action))
 async def master(msg: Message, state: FSMContext, chat_data: dict):
     if str(msg.from_user.id) not in chat_data["heroes"]:
         return
     ctx = await state.get_data()
+    ctx["state_before_master"] = await state.get_state()    
+    ctx["prompt_sent"] = False
     if ctx.get("prompt_sent", False):
         return # don't let user access gpt while already processing
+
     topic = msg.text.replace("/master", '').replace(BOT_USERNAME,'')
     if not topic.replace(' ',''):
         await msg.answer(lexicon["master_empty"] % chat_data["heroes"][str(msg.from_user.id)]["name"])
         await state.set_state(FSMStates.DnD_adding_master)
+        await state.set_data(ctx)
         return
     ctx["prompt_sent"] = True
     await state.set_data(ctx)
@@ -133,13 +137,16 @@ async def master(msg: Message, state: FSMContext, chat_data: dict):
                 hero_data=chat_data["heroes"][str(msg.from_user.id)])
     )
     ctx["prompt_sent"] = False
-    await state.set_data(ctx)
     await msg.answer(result)
     chat_data["actions"].append(topic)
     chat_data["actions"].append(result)
+    await state.set_data(ctx)
 
 @rt.message(StateFilter(FSMStates.DnD_adding_master))
 async def adding_master(msg: Message, state: FSMContext, chat_data: dict):
+    await msg.answer("срабатывает драный adding_master")
+    ctx = await state.get_data()
+    await state.set_state(eval(ctx["state_before_master"].replace(':','.'))) # avoid infinte cycle
     await master(msg, state, chat_data)
 
 
