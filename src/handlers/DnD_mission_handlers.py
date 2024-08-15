@@ -2,7 +2,7 @@ from config.config import bot, BOT_USERNAME
 from keyboards.keyboards import roll_kb
 from lexicon.lexicon import LEXICON_RU
 from prompts.prompts import PROMPTS_RU
-from prompts.functions import request_to_chatgpt
+from prompts.functions import request_to_chatgpt, process_action, ACTION_RELEVANCE_FOR_MISSION
 from states.states import FSMStates
 
 from random import randint
@@ -17,14 +17,13 @@ import asyncio
 rt = Router()
 MAX_TOKENS = 1000
 NEW_MISSION_CHANCE = 0.2
-ACTION_RELEVANCE_FOR_MISSION = 10
 lexicon = LEXICON_RU
 prompts = PROMPTS_RU
 ROLLING_SLEEP_TIME = 3
 
 
 @rt.message(StateFilter(FSMStates.DnD_default_state))
-async def maybe_generate_mission(msg: Message, state: FSMContext, translate_dict: dict, chat_data: dict):
+async def maybe_generate_mission(msg: Message, translate_dict: dict, chat_data: dict):
     if randint(0,100) / 100 < NEW_MISSION_CHANCE:
         result = request_to_chatgpt(content=prompts["DnD_generating_adventure"].format(
                 adventure=chat_data["lore"],
@@ -34,72 +33,6 @@ async def maybe_generate_mission(msg: Message, state: FSMContext, translate_dict
     await msg.answer(result.translate(translate_dict)) # translate to restrict model using markdown chars, avoiding bugs
     await FSMStates.multiset_state(chat_data["heroes"], msg.chat.id, FSMStates.DnD_taking_action)
     await msg.answer(lexicon["take_action"])
-
-
-async def process_action(topic, chat_data: dict, msg: Message, state: FSMContext, user_id=None):
-    if not user_id:
-        user_id = msg.from_user.id
-    user_id = str(user_id)
-    print("finally", user_id)
-    ctx = await state.get_data()
-    result = request_to_chatgpt(content=prompts["DnD_taking_action"].format(
-            action=topic,
-            recent_actions='\n'.join(
-                chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]
-                ),
-            hero_data=chat_data["heroes"][user_id],
-            successful=ctx["roll_result"])
-    )
-    await msg.answer(result)
-    chat_data["actions"].append(topic)
-    chat_data["actions"].append(result)
-    updated = request_to_chatgpt(content=prompts["update_after_action"].format(
-        action=topic, 
-        hero_data=chat_data["heroes"][user_id],
-        recent_actions='\n'.join(
-                chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]
-                ),
-        )
-    )
-    data = updated[updated.find('{'): updated.rfind('}') + 1]
-    try:
-        hero_data = eval(data)
-    except Exception as e:
-        print(e, data, updated, sep='\n')
-        return
-    hero_data["health"] = min(100, chat_data["heroes"][user_id]["health"] + hero_data["health_diff"])
-    chat_data["heroes"][user_id] = hero_data
-    await state.set_state(FSMStates.DnD_took_action)
-    print("is_game_finished")
-    game_end = request_to_chatgpt(content=prompts["is_game_finished"].format(
-        lore=chat_data["lore"],
-        hero_data=hero_data,
-        recent_actions='\n'.join(
-            chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]
-        ),
-
-    )
-    )
-    if int(game_end[0]):
-        await msg.answer(game_end[1:])
-        await FSMStates.clear(msg.chat.id)
-        return
-    states: dict[str, str] = await FSMStates.multiget_states(str(msg.chat.id), chat_data["heroes"])
-    if all([st == "FSMStates:" + FSMStates.DnD_took_action._state for st in list(states.values())]):
-        await msg.answer(lexicon["next_turn"])
-        turn_end = request_to_chatgpt(content=prompts["next_turn"].format(
-            lore=chat_data["lore"],
-            recent_actions='\n'.join(
-                chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]
-                )
-            )
-        )
-        chat_data["actions"].append(turn_end)
-        await msg.answer(turn_end)
-        await msg.answer(lexicon["take_action"])
-        await FSMStates.multiset_state(chat_data["heroes"], msg.chat.id, FSMStates.DnD_taking_action)
-    else:
-        await msg.answer(lexicon["wait_other_players"] % chat_data["heroes"][user_id]["name"])
 
 
 @rt.message(Command("action"), StateFilter(FSMStates.DnD_taking_action))
@@ -128,20 +61,24 @@ async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
     ctx = await state.get_data()
     ctx["user_msg_id"] = msg.from_user.id
     ctx["topic"] = topic
-    if check_type[0] != "0":
+    if check_type[:2] == "-1":
+        invalidation_reason = check_type[2:]
+        await msg.answer(invalidation_reason)
+        chat_data["actions"].append(topic)
+        chat_data["actions"].append(invalidation_reason)
+        return
+    elif check_type[0] == "0":
+        ctx["roll_result"] = 20
+    else:
         await msg.answer(lexicon["roll"] % check_type, 
                         reply_markup=roll_kb,
                         resize_keyboard=True
         )
         await state.set_data(ctx)
         await state.set_state(FSMStates.rolling)
-        return
-    ctx = await state.get_data()
-    if ctx.get("prompt_sent", False):
-        return # don't let user access gpt while already processing
-    ctx["prompt_sent"] = True   
+        return   
     ctx["topic"] = topic
-    ctx["roll_result"] = 20
+    print(check_type)
     await state.set_data(ctx)
     await process_action(topic, chat_data, msg, state, user_id=msg.from_user.id)
     ctx = await state.get_data()
