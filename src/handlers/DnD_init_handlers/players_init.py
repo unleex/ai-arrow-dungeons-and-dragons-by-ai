@@ -56,7 +56,11 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
         await msg.answer(lexicon['game_started'])
         await msg.answer(lexicon["generating_starting_location"])
 
-        data = request_to_chatgpt(content=prompts["DnD_init_location"] % chat_data["adventure_lore"])
+        #data = request_to_chatgpt(content=prompts["DnD_init_location"] % chat_data["adventure_lore"])
+        data = """{
+  "location": "Крепость последних магов, расположенная в древнем лесу посреди таинственных топей.",
+  "explanation": "Вы находитесь в таинственном древнем лесу, где густые вековые деревья пронизаны таинственным шепотом. Перед вами возвышается крепость последних магов, огромная строение, вырубленное из прочного камня и украшенное золотыми драгоценностями. В глубине дворца, в одной из темных комнат, стоит таинственный шкаф, отдавая окружающую среду аурой чар и магической энергии. Это место, где вы будете разгадывать тайны древних свитков, изучать любопытные артефакты и подготавливаться к предстояющей войне с драконами."
+}"""
         try:
             data = eval(data)
         except Exception as e:

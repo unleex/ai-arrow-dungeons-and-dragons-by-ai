@@ -1,7 +1,3 @@
-import json
-
-from aiogram.methods.get_chat_member import GetChatMember
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from config.config import bot
@@ -19,8 +15,18 @@ DnD_is_adventure_ok_no_butt = InlineKeyboardButton(
     text=lexicon["DnD_is_adventure_ok_no_butt"]
 )
 DnD_is_adventure_ok_kb = InlineKeyboardMarkup(
-    inline_keyboard= [
+    inline_keyboard=[
         [DnD_is_adventure_ok_yes_butt],
         [DnD_is_adventure_ok_no_butt]
+    ]
+)
+
+roll_butt = InlineKeyboardButton(
+    callback_data="roll",
+    text=lexicon["roll_butt"]
+)
+roll_kb = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [roll_butt]
     ]
 )
