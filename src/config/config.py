@@ -8,7 +8,7 @@ from openai import OpenAI
 env = Env()
 env.read_env()
 BOT_TOKEN: str = env("BOT_TOKEN")
-BOT_USERNAME = "@ai_dnd_bot"
+BOT_USERNAME = "@ai_dnd_jr_bot"
 bot: Bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="markdown"))
 redis = Redis(host='localhost')
 storage = RedisStorage(redis=redis)

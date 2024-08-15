@@ -52,25 +52,6 @@ def get_photo_from_chatgpt(folder="generated_images",
         print("Failed to download the image")
 
 
-async def process_action(topic, chat_data: dict, msg: Message, state: FSMContext, user_id=None):
-    if not user_id:
-        user_id = msg.from_user.id
-    user_id = str(user_id)
-    ctx = await state.get_data()
-    result = request_to_chatgpt(content=prompts["DnD_taking_action"].format(
-            action=topic,
-            recent_actions='\n'.join(
-                chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]
-                ),
-            hero_data=chat_data["heroes"][user_id],
-            successful=ctx["roll_result"])
-    )
-    await msg.answer(result)
-    chat_data["actions"].append(topic)
-    chat_data["actions"].append(result)
-    finish_action(topic, chat_data, msg, state, user_id)
-
-
 async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext, user_id=None):
     if not user_id:
         user_id = msg.from_user.id
@@ -121,3 +102,22 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
         await FSMStates.multiset_state(chat_data["heroes"], msg.chat.id, FSMStates.DnD_taking_action)
     else:
         await msg.answer(lexicon["wait_other_players"] % chat_data["heroes"][user_id]["name"])
+
+
+async def process_action(topic, chat_data: dict, msg: Message, state: FSMContext, user_id=None):
+    if not user_id:
+        user_id = msg.from_user.id
+    user_id = str(user_id)
+    ctx = await state.get_data()
+    result = request_to_chatgpt(content=prompts["DnD_taking_action"].format(
+            action=topic,
+            recent_actions='\n'.join(
+                chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]
+                ),
+            hero_data=chat_data["heroes"][user_id],
+            successful=ctx["roll_result"])
+    )
+    await msg.answer(result)
+    chat_data["actions"].append(topic)
+    chat_data["actions"].append(result)
+    await finish_action(topic, chat_data, msg, state, user_id)

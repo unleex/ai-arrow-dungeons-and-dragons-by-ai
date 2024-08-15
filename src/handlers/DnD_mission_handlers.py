@@ -2,7 +2,8 @@ from config.config import bot, BOT_USERNAME
 from keyboards.keyboards import roll_kb
 from lexicon.lexicon import LEXICON_RU
 from prompts.prompts import PROMPTS_RU
-from prompts.functions import request_to_chatgpt, process_action, ACTION_RELEVANCE_FOR_MISSION
+from prompts.functions import (request_to_chatgpt, process_action, 
+                               finish_action, ACTION_RELEVANCE_FOR_MISSION)
 from states.states import FSMStates
 
 from random import randint
@@ -66,6 +67,7 @@ async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
         await msg.answer(invalidation_reason)
         chat_data["actions"].append(topic)
         chat_data["actions"].append(invalidation_reason)
+        await finish_action(topic, chat_data, msg, state, msg.from_user.id)
         return
     elif check_type[0] == "0":
         ctx["roll_result"] = 20
