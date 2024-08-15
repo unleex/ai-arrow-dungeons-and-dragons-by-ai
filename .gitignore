@@ -4,3 +4,5 @@ src/test.py
 *__pycache__
 venv/
 dump.rdb
+generated_images/
+.DS_Store

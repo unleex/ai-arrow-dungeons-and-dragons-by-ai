@@ -1,5 +1,6 @@
 from config.config import openai_client
 from keyboards.keyboards import DnD_is_adventure_ok_kb
+from keyboards.set_menu import set_game_menu
 from lexicon.lexicon import LEXICON_RU
 from prompts.prompts import PROMPTS_RU
 from prompts.functions import request_to_chatgpt

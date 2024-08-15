@@ -6,6 +6,10 @@ LEXICON_RU = {
 "cancel_command_description":
 """Отмена действий
 """,
+"action_command_description":
+"Описать свое следующее действие",
+"master_command_description":
+"Обратиться к Мастеру",
 ##############
 
 

@@ -1,3 +1,4 @@
+from keyboards.set_menu import set_main_menu
 from lexicon.lexicon import LEXICON_RU
 from states.states import FSMStates
 
@@ -22,6 +23,7 @@ async def cancel_handler(msg: Message):
     await msg.answer(lexicon["cancel_handler"])
     await FSMStates.clear_chat_data(msg.chat.id)
     await FSMStates.clear_chat_state(msg.chat.id)
+    await set_main_menu(msg.chat.id)
 
 
 @rt.message(Command("set_state"))

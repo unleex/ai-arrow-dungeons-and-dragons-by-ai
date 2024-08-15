@@ -1,15 +1,12 @@
-from config.config import bot, openai_client
+from keyboards.set_menu import set_game_menu
 from lexicon.lexicon import LEXICON_RU
 from prompts.prompts import PROMPTS_RU
-from prompts.functions import request_to_chatgpt
 from states.states import FSMStates
 
 from aiogram import Router
-from aiogram.filters import Command, StateFilter
+from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import default_state
 from aiogram.types import Message
-from openai import OpenAI
 
 
 lexicon = LEXICON_RU
@@ -55,6 +52,7 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
         
         await msg.answer(lexicon['game_started'])
         await msg.answer(lexicon["generating_starting_location"])
+        await set_game_menu(msg.chat.id)
 
         #data = request_to_chatgpt(content=prompts["DnD_init_location"] % chat_data["lore"])
         data = """{

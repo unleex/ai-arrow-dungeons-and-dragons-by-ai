@@ -2,3 +2,4 @@ aiogram==3.11.0
 environs==11.0.0
 openai==1.40.3
 redis==5.0.8
+requests==2.32.3
