@@ -1,6 +1,3 @@
-import httpx
-from typing import Any
-
 from environs import Env
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties

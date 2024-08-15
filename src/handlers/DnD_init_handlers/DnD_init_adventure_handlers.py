@@ -21,7 +21,7 @@ MAX_TOKENS = 1000
 @rt.message(Command("dnd"), StateFilter(default_state))
 async def DnD_init_handler(msg: Message, state: FSMContext, chat_data: dict):
     #chat_data["heroes"] = {}
-    chat_data["adventure_lore"] = ""
+    #chat_data["lore"] = ""
     chat_data["actions"] = []
     await msg.answer(lexicon["DnD_init"])
     await state.set_state(FSMStates.generating_adventure)
@@ -49,7 +49,7 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, tran
                      reply_markup=DnD_is_adventure_ok_kb,
                      resize_keyboard=True)
     await state.set_state(FSMStates.DnD_is_adventure_ok_choosing)
-    chat_data["adventure_lore"] = result
+    chat_data["lore"] = result
 
 
 @rt.callback_query(F.data=="DnD_is_adventure_ok_yes", StateFilter(FSMStates.DnD_is_adventure_ok_choosing))
@@ -62,7 +62,7 @@ async def DnD_is_adventure_ok_yes_handler(clb: CallbackQuery, state: FSMContext)
 @rt.callback_query(F.data=="DnD_is_adventure_ok_no", StateFilter(FSMStates.DnD_is_adventure_ok_choosing))
 async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, translate_dict: dict, chat_data: dict):
     await clb.message.answer(lexicon["DnD_is_adventure_ok_no"])
-    completion = request_to_chatgpt(content=prompts["DnD_generating_lore"] % chat_data["adventure_lore"])
+    completion = request_to_chatgpt(content=prompts["DnD_generating_lore"] % chat_data["lore"])
     await clb.message.answer(completion.translate(translate_dict)
     ) # translate to restrict model using markdown chars, avoiding bugs
     await clb.message.answer(lexicon["DnD_is_adventure_ok"],
