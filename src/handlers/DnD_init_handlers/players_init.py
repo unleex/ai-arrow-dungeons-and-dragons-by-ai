@@ -38,15 +38,15 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
     ctx["prompt_sent"] = True
     await state.set_data(ctx)
 
-    if str(msg.from_user.id) in chat_data['heroes']:
-        await msg.answer(lexicon['already_in_db'].format(name=msg.from_user.first_name))
-        return
-    await msg.answer(lexicon["extracting_hero_data"])
-    result = request_to_chatgpt(content=prompts["extract_hero_data"] % msg.text)
-    data = result[result.find('{'): result.find('}') + 1]
-    hero_data = eval(data)
-    hero_data["health"] = 100
-    chat_data['heroes'][str(msg.from_user.id)] = hero_data
+    # if str(msg.from_user.id) in chat_data['heroes']:
+    #     await msg.answer(lexicon['already_in_db'].format(name=msg.from_user.first_name))
+    #     return
+    # await msg.answer(lexicon["extracting_hero_data"])
+    # result = request_to_chatgpt(content=prompts["extract_hero_data"] % msg.text)
+    # data = result[result.find('{'): result.find('}') + 1]
+    # hero_data = eval(data)
+    # hero_data["health"] = 100
+    # chat_data['heroes'][str(msg.from_user.id)] = hero_data
     await msg.answer(lexicon["extracted_hero_data"])
 
 
@@ -56,9 +56,15 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
         await msg.answer(lexicon['game_started'])
         await msg.answer(lexicon["generating_starting_location"])
 
-        location = request_to_chatgpt(content=prompts["DnD_init_location"] % chat_data["adventure_lore"])
-
-        await msg.answer(location)
+        data = request_to_chatgpt(content=prompts["DnD_init_location"] % chat_data["adventure_lore"])
+        try:
+            data = eval(data)
+        except Exception as e:
+            print(e, data, sep='\n')
+            return
+        location = data["location"]
+        explanation = data["explanation"]
+        await msg.answer(explanation)
         await msg.answer(lexicon["take_action"])
         await FSMStates.set_chat_state(msg.chat.id, FSMStates.DnD_taking_action)
         for user_id in chat_data["heroes"]:

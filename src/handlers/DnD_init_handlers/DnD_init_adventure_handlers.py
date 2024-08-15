@@ -20,8 +20,9 @@ MAX_TOKENS = 1000
 
 @rt.message(Command("dnd"), StateFilter(default_state))
 async def DnD_init_handler(msg: Message, state: FSMContext, chat_data: dict):
-    chat_data["heroes"] = {}
+    #chat_data["heroes"] = {}
     chat_data["adventure_lore"] = ""
+    chat_data["actions"] = []
     await msg.answer(lexicon["DnD_init"])
     await state.set_state(FSMStates.generating_adventure)
 

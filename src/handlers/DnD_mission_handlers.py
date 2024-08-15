@@ -25,7 +25,7 @@ prompts = PROMPTS_RU
 async def maybe_generate_mission(msg: Message, state: FSMContext, translate_dict: dict, chat_data: dict):
     if randint(0,100) / 100 < NEW_MISSION_CHANCE:
         result = request_to_chatgpt(content=prompts["DnD_generating_adventure"].format(
-                adventure=chat_data["adventure_topic"],
+                adventure=chat_data["lore"],
                 recent_actions='\n'.join(
                 chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]),
                 location="random location"))
@@ -53,51 +53,57 @@ async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
     result = request_to_chatgpt(content=prompts["DnD_taking_action"].format(
                 action=topic,
                 recent_actions='\n'.join(
-                chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]),
+                    chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]
+                    ),
                 hero_data=chat_data["heroes"][str(msg.from_user.id)])
     )
     ctx["prompt_sent"] = False
     await state.set_data(ctx)
-    result = completion.choices[0].message.content
     chat_data["actions"].append(topic)
     chat_data["actions"].append(result)
-    completion = openai_client.chat.completions.create(
-        model="gpt-4",
-        max_tokens=MAX_TOKENS,
-        temperature=1,
-         messages = [
-            {"role": "user", 
-             "content": prompts["update_after_action"].format(
-                 action=topic, 
-                 hero_data=chat_data["heroes"][str(msg.from_user.id)])}
-        ]
+    updated = request_to_chatgpt(content=prompts["update_after_action"].format(
+        action=topic, 
+        hero_data=chat_data["heroes"][str(msg.from_user.id)]
+        )
     )
-    updated = completion.choices[0].message.content
-    data = updated[updated.find('{'): updated.rfind('}') + 1]
-    hero_data = eval(data)
     print(updated)
+    data = updated[updated.find('{'): updated.rfind('}') + 1]
+    try:
+        hero_data = eval(data)
+    except Exception as e:
+        print(e, data, updated, sep='\n')
+        return
     hero_data["health"] = min(100, hero_data["health"])
     chat_data["heroes"][str(msg.from_user.id)] = hero_data
     await msg.answer(result)
     await state.set_state(FSMStates.DnD_took_action)
+    game_end = request_to_chatgpt(content=prompts["is_game_finished"].format(
+        lore=chat_data["lore"],
+        hero_data=hero_data,
+        recent_actions='\n'.join(
+            chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]
+        ),
+
+    )
+    )
+    print(game_end)
+    if int(game_end[0]):
+        print("game over")
+        await msg.answer(game_end[1:])
+        await FSMStates.clear(msg.chat.id)
+
     states: dict[str, str] = await FSMStates.get_chat_states(str(msg.chat.id))
     if all([st == "FSMStates:" + FSMStates.DnD_took_action._state for st in list(states.values())]):
         await msg.answer(lexicon["next_turn"])
-        completion = openai_client.chat.completions.create(
-            model="gpt-4",
-            max_tokens=MAX_TOKENS,
-            temperature=1,
-            messages = [
-                {"role": "user", 
-                "content": prompts["DnD_taking_action"].format(
-                    action=topic,
-                    hero_data=chat_data["heroes"][str(msg.from_user.id)],
-                    recent_actions='\n'.join(
-                        chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]
-                        ))} 
-                ]
+        turn_end = request_to_chatgpt(content=prompts["DnD_taking_action"].format(
+            action=topic,
+            hero_data=hero_data,
+            recent_actions='\n'.join(
+                chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]
+                )
+            )
         )
-        await msg.answer(completion.choices[0].message.content)
+        await msg.answer(turn_end)
         await msg.answer(lexicon["take_action"])
         await FSMStates.set_chat_state(msg.chat.id, FSMStates.DnD_taking_action)
 

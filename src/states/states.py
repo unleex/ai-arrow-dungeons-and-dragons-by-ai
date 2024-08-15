@@ -56,3 +56,8 @@ class FSMStates(StatesGroup):
     @staticmethod
     async def clear_chat_state(chat_id: int):
         await FSMStates.set_chat_state(chat_id, None)
+    
+    @staticmethod
+    async def clear(chat_id: int):
+        await FSMStates.set_chat_state(chat_id, None)
+        await FSMStates.set_chat_data(chat_id, {})
