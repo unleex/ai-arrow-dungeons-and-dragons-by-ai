@@ -40,7 +40,7 @@ async def get_states(msg: Message):
     await msg.answer(str(states))
 
 
-@rt.message(Command("unblock_api_calls"))
+@rt.message(Command("unblock"))
 async def unblock_api_calls(msg: Message, state: FSMContext):
     ctx = await state.get_data()
     ctx["prompt_sent"] = False
