@@ -38,9 +38,15 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, chat
     await state.set_data(ctx)
     await msg.answer(lexicon["DnD_generating_adventure"])
     ctx = {"topic": msg.text}
-    await msg.answer(lexicon["adventure_text_preloader"])
-    result = request_to_chatgpt(prompts["DnD_generating_lore"] % ctx["topic"])      
-    await msg.answer(lexicon["adventure_image_preloader"])
+    preloader = await msg.answer(lexicon["text_preloader"])
+    preloader_text = preloader.text
+    result = request_to_chatgpt(prompts["DnD_generating_lore"] % ctx["topic"])
+    await preloader.edit_text(preloader_text.replace('...', ' ✅') + '\n' + lexicon["image_preloader"])
+    preloader_text = preloader.text
+    await preloader.edit_text(preloader_text.replace('...', ' ✅') + '\n' + lexicon["voice_preloader"])
+    preloader_text = preloader.text
+    await preloader.edit_text(preloader_text.replace('...', ' ✅'))
+    #await msg.answer(lexicon["adventure_image_preloader"])
     photo = get_photo_from_chatgpt(
         prompt=result[:AMOUNT_OF_TEXT_FOR_PICTURE_GEN]) # not including antagonist part, it raises censorship
     await msg.answer(lexicon["adventure_voice_preloader"])
@@ -77,7 +83,7 @@ async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, 
         content=prompts["DnD_generating_lore"] % chat_data["lore"]).translate(
             translate_dict) # translate to restrict model using markdown chars, avoiding bugs
     await clb.message.answer_photo(get_photo_from_chatgpt(prompt=result))
-    #await clb.message.answer(result) 
+    #await clb.message.answer(result)
     await clb.message.answer_voice(tts(result, ambience_path="src/ambience/anxious.mp3"))
     await clb.message.answer(lexicon["DnD_is_adventure_ok"],
                      reply_markup=DnD_is_adventure_ok_kb,
