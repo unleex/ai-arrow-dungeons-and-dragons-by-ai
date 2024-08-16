@@ -35,12 +35,14 @@ def request_to_chatgpt(content, model='gpt-4o-mini' , role='user', temperature=1
 
 def get_photo_from_chatgpt(prompt,
                            folder="generated_images",
-                           model="dall-e-3"
+                           model="dall-e-2"
                            ):
 
     response: ImagesResponse = openai_client.images.generate(
         prompt="Я опишу тебе сцену, а ты нарисуй ее от лица разказчика.\n Сцена:\n" + prompt,
-        model=model
+        model=model,
+        quality="standard",
+        size="512x512"
     )
 
     # Save the image to a file
@@ -122,7 +124,7 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
     if int(game_end[0]):
         await msg.answer_photo(get_photo_from_chatgpt(prompt=game_end[1:]))
         await msg.answer(game_end[1:])
-        await msg.answer_voice(tts(game_end[1:]))
+        await msg.answer_voice(tts(game_end[1:], ambience_path="src/ambience/anxious.mp3"))
         await FSMStates.clear(msg.chat.id)
         return
     states: dict[str, str] = await FSMStates.multiget_states(str(msg.chat.id), chat_data["heroes"])
@@ -138,7 +140,7 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
         )
         chat_data["actions"].append(turn_end)
         await msg.answer(turn_end)
-        await msg.answer_voice(tts(turn_end))
+        await msg.answer_voice(tts(turn_end, ambience_path="src/ambience/anxious.mp3"))
         await msg.answer_photo(get_photo_from_chatgpt(prompt=turn_end))
         await msg.answer(lexicon["take_action"])
         await FSMStates.multiset_state(chat_data["heroes"], msg.chat.id, FSMStates.DnD_taking_action)
@@ -160,7 +162,7 @@ async def process_action(topic, chat_data: dict, msg: Message, state: FSMContext
             successful=ctx["roll_result"])
     )
     await msg.answer(result)
-    await msg.answer_voice(tts(result))
+    await msg.answer_voice(tts(result, ambience_path="src/ambience/anxious.mp3"))
     chat_data["actions"].append(topic)
     chat_data["actions"].append(result)
     await finish_action(topic, chat_data, msg, state, user_id)

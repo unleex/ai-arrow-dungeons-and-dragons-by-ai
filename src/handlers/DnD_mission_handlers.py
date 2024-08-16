@@ -42,7 +42,8 @@ async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
     ctx = await state.get_data()
     if ctx.get("prompt_sent", False):
         return # don't let user access gpt while already processing
-    topic = msg.text.replace("/action", '').replace(BOT_USERNAME,'')
+    transcription_addon = lexicon["transcripted"].replace("%s", '')
+    topic = msg.text.replace("/action", '').replace(BOT_USERNAME,'').replace(transcription_addon, '')
     if not topic.replace(' ',''):
         await msg.answer(lexicon["action_empty"])   
         await state.set_state(FSMStates.DnD_adding_action)
@@ -90,6 +91,16 @@ async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
 
 @rt.message(StateFilter(FSMStates.DnD_adding_action))
 async def adding_action(msg: Message, state: FSMContext, chat_data: dict):
+    if msg.voice:
+        target_path = "src/audios_for_sst/audio.wav"
+        await bot.download(msg.voice, target_path)
+        audio_file = open("speech.mp3", "rb")
+        audio_file = open("speech.mp3", "rb")
+        transcript = openai_client.audio.transcriptions.create(
+        file=audio_file,
+        model="whisper-1"
+        )   
+        await msg.edit_text(lexicon["transcripted"] % transcript)
     await taking_action(msg, state, chat_data)
 
 
@@ -123,8 +134,8 @@ async def master(msg: Message, state: FSMContext, chat_data: dict):
     ctx["prompt_sent"] = False
     if ctx.get("prompt_sent", False):
         return # don't let user access gpt while already processing
-
-    topic = msg.text.replace("/master", '').replace(BOT_USERNAME,'')
+    transcription_addon = lexicon["transcripted"].replace("%s", '')
+    topic = msg.text.replace("/master", '').replace(BOT_USERNAME,'').replace(transcription_addon, '')
     if not topic.replace(' ',''):
         await msg.answer(lexicon["master_empty"] % chat_data["heroes"][str(msg.from_user.id)]["name"])
         await state.set_state(FSMStates.DnD_adding_master)
@@ -147,10 +158,20 @@ async def master(msg: Message, state: FSMContext, chat_data: dict):
 
 @rt.message(StateFilter(FSMStates.DnD_adding_master))
 async def adding_master(msg: Message, state: FSMContext, chat_data: dict):
+    if msg.voice:
+        target_path = "src/audios_for_sst/audio.wav"
+        await bot.download(msg.voice, target_path)
+        audio_file = open("speech.mp3", "rb")
+        audio_file = open("speech.mp3", "rb")
+        transcript = openai_client.audio.transcriptions.create(
+        file=audio_file,
+        model="whisper-1"
+        )   
+        await msg.edit_text(lexicon["transcripted"] % transcript)
+
     ctx = await state.get_data()
     await state.set_state(eval(ctx["state_before_master"].replace(':','.'))) # avoid infinte cycle
     await master(msg, state, chat_data)
-
 
 
 @rt.message(Command("action"), StateFilter(FSMStates.DnD_took_action))

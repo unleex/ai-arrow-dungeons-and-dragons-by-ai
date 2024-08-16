@@ -110,5 +110,7 @@ LEXICON_RU = {
 "adventure_image_preloader":
 """Рисую картину...""",
 "adventure_voice_preloader":
-"""Репетиурую речь..."""
+"""Репетиурую речь...""",
+"transcripted":
+"""Распознано:\n%s"""
 }

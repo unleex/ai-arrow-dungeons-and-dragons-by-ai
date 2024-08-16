@@ -38,3 +38,11 @@ async def set_state(msg: Message, state: FSMContext):
 async def get_states(msg: Message):
     states = await FSMStates.get_chat_states(msg.chat.id)
     await msg.answer(str(states))
+
+
+@rt.message(Command("unblock_api_calls"))
+async def unblock_api_calls(msg: Message, state: FSMContext):
+    ctx = await state.get_data()
+    ctx["prompt_sent"] = False
+    await state.set_data(ctx)
+    await msg.answer("unlocked")
