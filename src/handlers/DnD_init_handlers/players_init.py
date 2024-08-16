@@ -1,6 +1,6 @@
 from keyboards.set_menu import set_game_menu
 from lexicon.lexicon import LEXICON_RU
-from prompts.functions import request_to_chatgpt, get_photo_from_chatgpt
+from prompts.functions import request_to_chatgpt, get_photo_from_chatgpt, tts
 from prompts.prompts import PROMPTS_RU
 from states.states import FSMStates
 
@@ -45,7 +45,7 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
     result = request_to_chatgpt(content=prompts["extract_hero_data"] % msg.text)
     ctx["prompt_sent"] = False
     await state.set_data(ctx)
-    data = result[result.find('{'): result.find('}') + 1]
+    data = result[result.find('{'): result.rfind('}') + 1]
     hero_data = eval(data)
     hero_data["health"] = 100
     chat_data['heroes'][str(msg.from_user.id)] = hero_data
@@ -64,6 +64,7 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
 #   "location": "Крепость последних магов, расположенная в древнем лесу посреди таинственных топей.",
 #   "explanation": "Вы находитесь в таинственном древнем лесу, где густые вековые деревья пронизаны таинственным шепотом. Перед вами возвышается крепость последних магов, огромная строение, вырубленное из прочного камня и украшенное золотыми драгоценностями. В глубине дворца, в одной из темных комнат, стоит таинственный шкаф, отдавая окружающую среду аурой чар и магической энергии. Это место, где вы будете разгадывать тайны древних свитков, изучать любопытные артефакты и подготавливаться к предстояющей войне с драконами."
 # }"""
+        data = data[data.find('{'): data.rfind('}') + 1]
         try:
             data = eval(data)
         except Exception as e:
@@ -71,7 +72,8 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
             return
         location = data["location"]
         explanation = data["explanation"]
-        await msg.answer(explanation)
+        print(explanation)
+        await msg.answer_voice(tts(explanation))
         await msg.answer(lexicon["take_action"])
         await FSMStates.clear(msg.chat.id)
         await FSMStates.multiset_state(chat_data["heroes"], msg.chat.id, FSMStates.DnD_taking_action)

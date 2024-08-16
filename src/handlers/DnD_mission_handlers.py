@@ -81,7 +81,6 @@ async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
         await state.set_state(FSMStates.rolling)
         return
     ctx["topic"] = topic
-    print(check_type)
     await state.set_data(ctx)
     await process_action(topic, chat_data, msg, state, user_id=msg.from_user.id)
     ctx = await state.get_data()
@@ -148,7 +147,6 @@ async def master(msg: Message, state: FSMContext, chat_data: dict):
 
 @rt.message(StateFilter(FSMStates.DnD_adding_master))
 async def adding_master(msg: Message, state: FSMContext, chat_data: dict):
-    await msg.answer("срабатывает драный adding_master")
     ctx = await state.get_data()
     await state.set_state(eval(ctx["state_before_master"].replace(':','.'))) # avoid infinte cycle
     await master(msg, state, chat_data)

@@ -6,3 +6,4 @@ venv/
 dump.rdb
 generated_images/
 .DS_Store
+src/newtest.py

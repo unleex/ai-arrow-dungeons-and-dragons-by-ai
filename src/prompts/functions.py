@@ -3,32 +3,34 @@ from lexicon.lexicon import LEXICON_RU
 from prompts.prompts import PROMPTS_RU
 from states.states import FSMStates
 
+import os
+from random import randint
+import requests
+
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, FSInputFile
+import librosa
+from openai.types import ImagesResponse
+import soundfile
+
 
 lexicon = LEXICON_RU
 prompts = PROMPTS_RU
-from config.config import openai_client
-from openai.types import ImagesResponse
-import requests
-import uuid
-
-
-
 ACTION_RELEVANCE_FOR_MISSION = 10
 
-def request_to_chatgpt(content, model='gpt-4' , role='user', temperature=1, max_tokens=500):
+
+def request_to_chatgpt(content, model='gpt-4o-mini' , role='user', temperature=1, max_tokens=500):
     completion = openai_client.chat.completions.create(
             model=model,
             max_tokens=max_tokens,
             temperature=temperature,
             messages = [
-                {"role": role, "content": content}
+                {"role": role, "content": content + 
+                 f"Умести свой ответ в {max_tokens} токенов. Твой ответ не должен обрываться на середине предложения."}
             ]
         )
     result = completion.choices[0].message.content
     return result
-
 
 
 def get_photo_from_chatgpt(prompt,
@@ -37,21 +39,54 @@ def get_photo_from_chatgpt(prompt,
                            ):
 
     response: ImagesResponse = openai_client.images.generate(
-        prompt="Я опишу тебе сцену, а ты нарисуй ее от лица разказчика.\n " + prompt,
+        prompt="Я опишу тебе сцену, а ты нарисуй ее от лица разказчика.\n Сцена:\n" + prompt,
         model=model
     )
 
     # Save the image to a file
     image_url = response.data[0].url
     image_response = requests.get(image_url)
-    filename = f"generated{uuid.uuid1()}_image.png"
+    filename = f"generated_image.png"
+    target_path = f'src/{folder}/{filename}'
     if image_response.status_code == 200:
-        with open(f'src/{folder}/{filename}', 'wb') as f:
+        with open(target_path, 'wb') as f:
             f.write(image_response.content)
-        print(f"Image downloaded and saved as '{filename}'")
     else:
         print("Failed to download the image")
-    return FSInputFile(f'src/{folder}/{filename}')
+    input_file = FSInputFile(target_path)
+    #os.remove(target_path)
+    return input_file
+
+
+def tts(prompt,
+        folder="generated_audio",
+        model="tts-1",
+        voice="onyx",
+        ambience_path=None
+        ):
+    response = openai_client.audio.speech.create(
+    model=model,
+    voice=voice,
+    input=prompt
+    )
+    filename = f"generated_audio.wav"
+    target_path = f"src/{folder}/{filename}"
+    response.write_to_file(target_path)
+    if ambience_path:
+        voice, voice_sr = librosa.load(target_path)
+        ambience, ambience_sr = librosa.load(ambience_path)
+        if ambience_sr != voice_sr:
+            ambience = librosa.resample(ambience, orig_sr=ambience_sr, target_sr=voice_sr)
+        voice_time = len(voice)
+        ambience_time = len(ambience)
+        ambience_sample_start = randint(0, ambience_time - voice_time - 1)
+        ambience_sample = ambience[ambience_sample_start: ambience_sample_start + voice_time]
+        result = voice + ambience_sample
+        soundfile.write(target_path, result, voice_sr)
+
+    input_file = FSInputFile(target_path)
+    #os.remove(target_path)
+    return input_file
 
 
 async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext, user_id=None):
@@ -87,6 +122,7 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
     if int(game_end[0]):
         await msg.answer_photo(get_photo_from_chatgpt(prompt=game_end[1:]))
         await msg.answer(game_end[1:])
+        await msg.answer_voice(tts(game_end[1:]))
         await FSMStates.clear(msg.chat.id)
         return
     states: dict[str, str] = await FSMStates.multiget_states(str(msg.chat.id), chat_data["heroes"])
@@ -102,6 +138,7 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
         )
         chat_data["actions"].append(turn_end)
         await msg.answer(turn_end)
+        await msg.answer_voice(tts(turn_end))
         await msg.answer_photo(get_photo_from_chatgpt(prompt=turn_end))
         await msg.answer(lexicon["take_action"])
         await FSMStates.multiset_state(chat_data["heroes"], msg.chat.id, FSMStates.DnD_taking_action)
@@ -123,6 +160,7 @@ async def process_action(topic, chat_data: dict, msg: Message, state: FSMContext
             successful=ctx["roll_result"])
     )
     await msg.answer(result)
+    await msg.answer_voice(tts(result))
     chat_data["actions"].append(topic)
     chat_data["actions"].append(result)
     await finish_action(topic, chat_data, msg, state, user_id)

@@ -104,5 +104,11 @@ LEXICON_RU = {
 ✅Кинуть d20✅
 """,
 "rolling":
-"""И результат..."""
+"""И результат...""",
+"adventure_text_preloader":
+"""Сочиняю предысторию...""",
+"adventure_image_preloader":
+"""Рисую картину...""",
+"adventure_voice_preloader":
+"""Репетиурую речь..."""
 }
