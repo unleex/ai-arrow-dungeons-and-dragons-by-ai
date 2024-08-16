@@ -48,6 +48,8 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
     data = result[result.find('{'): result.find('}') + 1]
     hero_data = eval(data)
     hero_data["health"] = 100
+    for i in ["intelligence", "strength", "dexterity", "charisma"]:
+        hero_data[i] = 1
     chat_data['heroes'][str(msg.from_user.id)] = hero_data
     await msg.answer(lexicon["extracted_hero_data"])
 
