@@ -1,6 +1,6 @@
 from keyboards.set_menu import set_game_menu
 from lexicon.lexicon import LEXICON_RU
-from prompts.functions import request_to_chatgpt, get_photo_from_chatgpt, tts
+from prompts.functions import request_to_chatgpt, tts
 from prompts.prompts import PROMPTS_RU
 from states.states import FSMStates
 
@@ -73,7 +73,7 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
         location = data["location"]
         explanation = data["explanation"]
         print(explanation)
-        await msg.answer_voice(tts(explanation))
+        await msg.answer_voice(tts(explanation), ambience_path="src/ambience/anxious.mp3")
         await msg.answer(lexicon["take_action"])
         await FSMStates.clear(msg.chat.id)
         await FSMStates.multiset_state(chat_data["heroes"], msg.chat.id, FSMStates.DnD_taking_action)

@@ -1,6 +1,5 @@
-from config.config import openai_client
 from keyboards.keyboards import DnD_is_adventure_ok_kb
-from keyboards.set_menu import set_game_menu, set_main_menu
+from keyboards.set_menu import set_main_menu
 from lexicon.lexicon import LEXICON_RU
 from prompts.prompts import PROMPTS_RU
 from prompts.functions import request_to_chatgpt, get_photo_from_chatgpt, tts
@@ -10,7 +9,7 @@ from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import default_state
-from aiogram.types import CallbackQuery, Message, FSInputFile
+from aiogram.types import CallbackQuery, Message
 
 
 lexicon = LEXICON_RU
@@ -79,7 +78,7 @@ async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, 
             translate_dict) # translate to restrict model using markdown chars, avoiding bugs
     await clb.message.answer_photo(get_photo_from_chatgpt(prompt=result))
     #await clb.message.answer(result) 
-    await clb.message.answer_voice(tts(result))
+    await clb.message.answer_voice(tts(result, ambience_path="src/ambience/anxious.mp3"))
     await clb.message.answer(lexicon["DnD_is_adventure_ok"],
                      reply_markup=DnD_is_adventure_ok_kb,
                      resize_keyboard=True)
