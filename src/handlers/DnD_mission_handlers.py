@@ -43,7 +43,7 @@ async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
         return # don't let user access gpt while already processing
     topic = msg.text.replace("/action", '').replace(BOT_USERNAME,'')
     if not topic.replace(' ',''):
-        await msg.answer(lexicon["action_empty"])
+        await msg.answer(lexicon["action_empty"])   
         await state.set_state(FSMStates.DnD_adding_action)
         return
     ctx["prompt_sent"] = True   
@@ -95,6 +95,11 @@ async def adding_action(msg: Message, state: FSMContext, chat_data: dict):
 
 @rt.callback_query(F.data=="roll", StateFilter(FSMStates.rolling))
 async def rolling(clb: CallbackQuery, state: FSMContext, chat_data: dict):
+    ctx = await state.get_data()
+    if ctx.get("prompt_sent", False):
+        return # don't let user access gpt while already processing
+    ctx["prompt_sent"] = True
+    await state.set_data(ctx)
     sent_msg = await clb.message.answer(lexicon["rolling"])
     result = randint(1, 20)
     await asyncio.sleep(ROLLING_SLEEP_TIME)
@@ -102,10 +107,8 @@ async def rolling(clb: CallbackQuery, state: FSMContext, chat_data: dict):
     ctx = await state.get_data()
     topic = ctx["topic"]
     ctx["roll_result"] = result
-    ctx["prompt_sent"] = True
     user_msg_id = ctx["user_msg_id"]
     await state.set_data(ctx)
-    print("ROLLING ROLLING", user_msg_id)
     await process_action(topic, chat_data, clb.message, state, user_id=user_msg_id)
     ctx["prompt_sent"] = False
     await state.set_data(ctx)

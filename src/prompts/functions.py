@@ -17,7 +17,7 @@ import uuid
 
 ACTION_RELEVANCE_FOR_MISSION = 10
 
-def request_to_chatgpt(model='gpt-4', role='user', temperature=1, max_tokens=500, content=''):
+def request_to_chatgpt(content, model='gpt-4' , role='user', temperature=1, max_tokens=500):
     completion = openai_client.chat.completions.create(
             model=model,
             max_tokens=max_tokens,
@@ -31,9 +31,10 @@ def request_to_chatgpt(model='gpt-4', role='user', temperature=1, max_tokens=500
 
 
 
-def get_photo_from_chatgpt(folder="generated_images",
-                           model="dall-e-3",
-                           prompt="помощница босса крупной компании, испробовавшая все попытки получить повышение"):
+def get_photo_from_chatgpt(prompt,
+                           folder="generated_images",
+                           model="dall-e-3"
+                           ):
 
     response: ImagesResponse = openai_client.images.generate(
         prompt=prompt,
@@ -94,7 +95,8 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
             recent_actions='\n'.join(
                 chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]
                 )
-            )
+            ),
+            max_tokens=1000
         )
         chat_data["actions"].append(turn_end)
         await msg.answer(turn_end)
