@@ -4,7 +4,7 @@ from prompts.prompts import PROMPTS_RU
 from states.states import FSMStates
 
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, FSInputFile
 
 lexicon = LEXICON_RU
 prompts = PROMPTS_RU
@@ -36,7 +36,7 @@ def get_photo_from_chatgpt(folder="generated_images",
                            prompt="помощница босса крупной компании, испробовавшая все попытки получить повышение"):
 
     response: ImagesResponse = openai_client.images.generate(
-        prompt=prompt,
+        prompt="Я опишу тебе сцену, а ты нарисуй ее от лица разказчика.\n " + prompt,
         model=model
     )
 
@@ -50,6 +50,7 @@ def get_photo_from_chatgpt(folder="generated_images",
         print(f"Image downloaded and saved as '{filename}'")
     else:
         print("Failed to download the image")
+    return FSInputFile(f'src/{folder}/{filename}')
 
 
 async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext, user_id=None):
@@ -57,7 +58,7 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
         user_id = msg.from_user.id
     user_id = str(user_id)
     updated = request_to_chatgpt(content=prompts["update_after_action"].format(
-        action=topic, 
+        action=topic,
         hero_data=chat_data["heroes"][user_id],
         recent_actions='\n'.join(
                 chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]
@@ -83,6 +84,7 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
     )
     )
     if int(game_end[0]):
+        await msg.answer_photo(get_photo_from_chatgpt(prompt=game_end[1:]))
         await msg.answer(game_end[1:])
         await FSMStates.clear(msg.chat.id)
         return
@@ -98,6 +100,7 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
         )
         chat_data["actions"].append(turn_end)
         await msg.answer(turn_end)
+        await msg.answer_photo(get_photo_from_chatgpt(prompt=turn_end))
         await msg.answer(lexicon["take_action"])
         await FSMStates.multiset_state(chat_data["heroes"], msg.chat.id, FSMStates.DnD_taking_action)
     else:

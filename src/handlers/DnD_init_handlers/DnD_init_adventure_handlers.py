@@ -1,16 +1,16 @@
 from config.config import openai_client
 from keyboards.keyboards import DnD_is_adventure_ok_kb
-from keyboards.set_menu import set_game_menu
+from keyboards.set_menu import set_game_menu, set_main_menu
 from lexicon.lexicon import LEXICON_RU
 from prompts.prompts import PROMPTS_RU
-from prompts.functions import request_to_chatgpt
+from prompts.functions import request_to_chatgpt, get_photo_from_chatgpt
 from states.states import FSMStates
 
 from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import default_state
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, FSInputFile
 
 
 lexicon = LEXICON_RU
@@ -21,6 +21,7 @@ MAX_TOKENS = 1000
 
 @rt.message(Command("dnd"), StateFilter(default_state))
 async def DnD_init_handler(msg: Message, state: FSMContext, chat_data: dict):
+    await set_main_menu(msg.chat.id)
     chat_data["heroes"] = {}
     chat_data["lore"]  = ""
     chat_data["actions"] = []
@@ -46,6 +47,8 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, tran
 # Чуя измену, Мелиндра подступила к злодею и наложила на него проклятие, которое приковало его душу к шкафу. Однако, вступив в схватку с могущественным драконом, Мелиндра погибла, не успев рассказать о своем замысле другим магам клана.
 # Элгар, узнав о своей ответственности, предположил, что проклятье Мелиндры все еще связывает драконов с шкафом. Осознав важность своей миссии, он начал готовиться к предстоящей войне. Элгар обратился за помощью к другим магам, воинам и героям, несмотря на их первоначальное недоверие, они поняли серьезность ситуации и присоединились к нему.
 # И вот теперь, эти герои, лицом к лицу со страшной угрозой, готовы разгадать тайны древних свитков, изучить шкаф у тещи эльфийского мага и остановить предстоящую войну с драконами."""
+    await msg.answer_photo(get_photo_from_chatgpt(prompt=result))
+
     await msg.answer(result) # translate to restrict model using markdown chars, avoiding bugs
     await msg.answer(lexicon["DnD_is_adventure_ok"],
                      reply_markup=DnD_is_adventure_ok_kb,
@@ -66,9 +69,9 @@ async def DnD_is_adventure_ok_yes_handler(clb: CallbackQuery, state: FSMContext)
 async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, translate_dict: dict, chat_data: dict):
     ctx = await state.get_data()
     await clb.message.answer(lexicon["DnD_is_adventure_ok_no"])
-    completion = request_to_chatgpt(content=prompts["DnD_generating_lore"] % ctx["topic"])
-    await clb.message.answer(completion.translate(translate_dict)
-    ) # translate to restrict model using markdown chars, avoiding bugs
+    completion = request_to_chatgpt(content=prompts["DnD_generating_lore"] % chat_data["adventure_lore"])
+    await clb.answer_photo(get_photo_from_chatgpt(prompt=completion.translate(translate_dict)))
+    await clb.message.answer(completion.translate(translate_dict)) # translate to restrict model using markdown chars, avoiding bugs
     await clb.message.answer(lexicon["DnD_is_adventure_ok"],
                      reply_markup=DnD_is_adventure_ok_kb,
                      resize_keyboard=True)

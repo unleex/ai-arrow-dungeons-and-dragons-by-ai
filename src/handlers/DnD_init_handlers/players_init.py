@@ -1,9 +1,10 @@
 from keyboards.set_menu import set_game_menu
 from lexicon.lexicon import LEXICON_RU
-from prompts.functions import request_to_chatgpt
+from prompts.functions import request_to_chatgpt, get_photo_from_chatgpt
 from prompts.prompts import PROMPTS_RU
 from states.states import FSMStates
 
+from keyboards.set_menu import set_game_menu
 from aiogram import Router
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
@@ -22,6 +23,7 @@ async def counting_players(msg: Message, state: FSMContext):
         await msg.answer(lexicon['amount_of_players_wrong_format'])
     else:
         await msg.answer(lexicon["DnD_init_players"])
+        await set_game_menu(msg.chat.id)
         ctx = await state.get_data()
         ctx["number_of_players"] = int(msg.text)
         await FSMStates.set_chat_data(msg.chat.id, ctx)
@@ -52,7 +54,7 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
 
     # TODO: unnest
     if len(chat_data['heroes']) == ctx['number_of_players']:
-        
+
         await msg.answer(lexicon['game_started'])
         await msg.answer(lexicon["generating_starting_location"])
         await set_game_menu(msg.chat.id)
