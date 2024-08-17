@@ -44,19 +44,23 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, chat
     await state.set_data(ctx)
     await msg.answer(lexicon["DnD_generating_adventure"])
     ctx = {"topic": msg.text}
+
+    #text
     preloader = await msg.answer(lexicon["text_preloader"])
     preloader_text = preloader.text
     result = request_to_chatgpt(prompts["DnD_generating_lore"] % ctx["topic"])
-    await preloader.edit_text(preloader_text.replace('...', ' ✅') + '\n' + lexicon["image_preloader"])
+
+    #voice
+    preloader = await preloader.edit_text(preloader_text.replace('...', ' ✅') + '\n' + lexicon["voice_preloader"])
     preloader_text = preloader.text
-    await preloader.edit_text(preloader_text.replace('...', ' ✅') + '\n' + lexicon["voice_preloader"])
-    preloader_text = preloader.text
-    await preloader.edit_text(preloader_text.replace('...', ' ✅'))
-    #await msg.answer(lexicon["adventure_image_preloader"])
-    photo = get_photo_from_chatgpt(
-        prompt=result[:AMOUNT_OF_TEXT_FOR_PICTURE_GEN]) # not including antagonist part, it raises censorship
-    await msg.answer(lexicon["adventure_voice_preloader"])
     voice = tts(result, ambience_path="src/ambience/anxious.mp3")
+
+
+    #photo
+    preloader = await preloader.edit_text(preloader_text.replace('...', ' ✅') + '\n' + lexicon["image_preloader"])
+    preloader_text = preloader.text
+
+
     photo, error_code, violation_level = get_photo_from_chatgpt(content=result)
     if violation_level != 2:
         if violation_level == 1:
@@ -70,7 +74,9 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, chat
         await msg.answer(lexicon["content_policy_violation_retries_exhausted"])
         await unblock_api_calls(msg, state)
         return
-    await msg.answer(lexicon["adventure_voice_preloader"])
+
+    await preloader.edit_text(preloader_text.replace('...', ' ✅'))
+    #await msg.answer(lexicon["adventure_image_preloader"])
 #     result = """Недавно, Элгар, несчастный зять древнего клана магов, обнаружил что-то необычное в шкафу своей свекрови. Там глубоко спрятаны были драгоценности и редкие артефакты, а ещё несколько старинных свитков. Элгар, увлекшись изучением свитков, обнаружил, что те были дневниками Мелиндры, предка своей жены и мощного мага, битву с которым вспоминали по всему королевству.
 # Мелиндра всю жизнь была фанатично увлечена драконами. Она изучала их природу, потребности, образ жизни, и даже смогла наладить контакт с некоторыми из них. Однако, под влиянием злого чародея, она была обманута, и её знания и исследования были использованы для неправильных целей. Злодей превратил драконов в свою личную армию, и развязал войну против королевства.
 # Чуя измену, Мелиндра подступила к злодею и наложила на него проклятие, которое приковало его душу к шкафу. Однако, вступив в схватку с могущественным драконом, Мелиндра погибла, не успев рассказать о своем замысле другим магам клана.
@@ -79,6 +85,7 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, chat
     await msg.answer_photo(photo)
     #await msg.answer(result) # translate to restrict model using markdown chars, avoiding bugs
     await msg.answer_voice(voice)
+
     await msg.answer(lexicon["DnD_is_adventure_ok"],
                      reply_markup=DnD_is_adventure_ok_kb,
                      resize_keyboard=False)
@@ -124,7 +131,7 @@ async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, 
         ctx["prompt_sent"] = False
         await state.set_data(ctx)
         return
-    #await clb.message.answer(result) 
+    #await clb.message.answer(result)
     await clb.message.answer_photo(photo)
     await clb.message.answer_voice(voice)
     await clb.message.answer(lexicon["DnD_is_adventure_ok"],

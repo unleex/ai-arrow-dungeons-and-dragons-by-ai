@@ -39,13 +39,22 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
         return # don't let user access gpt while already processing
     ctx["prompt_sent"] = True
     await state.set_data(ctx)
+
     if str(msg.from_user.id) in chat_data['heroes']:
         await msg.answer(lexicon['already_in_db'].format(name=msg.from_user.first_name))
         return
-    await msg.answer(lexicon["extracting_hero_data"])
+
+    #text
+    preloader = await msg.answer(lexicon["extracting_hero_data"])
+    preloader_text = preloader.text
     #TODO: add preloader like in adventure gen
     result = request_to_chatgpt(prompts["extract_hero_data"] % msg.text)
-    
+
+
+    #photo
+    preloader = await preloader.edit_text(preloader_text.replace('...', ' ✅') + '\n' + lexicon["image_preloader"])
+    preloader_text = preloader.text
+
     hero_image, error_code, violation_level = get_photo_from_chatgpt(
         content=result, target_path=f"src/hero_images/{msg.from_user.id}_hero.png")
     if violation_level != 2:
@@ -60,6 +69,9 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
         await msg.answer(lexicon["content_policy_violation_retries_exhausted"])
         await unblock_api_calls(msg, state)
         return
+
+    await preloader.edit_text(preloader_text.replace('...', ' ✅'))
+
     #TODO: add preloader like in adventure gen
     data = result[result.find('{'): result.rfind('}') + 1]
     hero_data = eval(data)
@@ -71,14 +83,14 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
     chat_data["experience_data"][str(msg.from_user.id)] = dict(zip(skills, stats)) | dict(zip(skills_exp, exp))
     chat_data['heroes'][str(msg.from_user.id)] = hero_data
     await msg.answer_photo(hero_image)
-    await msg.answer(lexicon["extracted_hero_data"])
 
 
     # TODO: unnest
     if len(chat_data['heroes']) == ctx['number_of_players']:
 
         await msg.answer(lexicon['game_started'])
-        await msg.answer(lexicon["generating_starting_location"])
+        preloader = await msg.answer(lexicon["generating_starting_location"])
+        preloader_text = preloader.text
         await set_game_menu(msg.chat.id)
 
         data = request_to_chatgpt(prompts["DnD_init_location"] % chat_data["lore"])
@@ -95,7 +107,11 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
         location = data["location"]
         explanation = data["explanation"]
 
-        photo, error_code, violation_level = get_photo_from_chatgpt(content=result)
+        #photo
+        preloader = await preloader.edit_text(preloader_text.replace('...', ' ✅') + '\n' + lexicon["image_preloader"])
+        preloader_text = preloader.text
+
+        photo, error_code, violation_level = get_photo_from_chatgpt(content=location)
         if violation_level != 2:
             if violation_level == 1:
                 await msg.answer(lexicon["content_policy_violation_warning"])
@@ -108,6 +124,8 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
             await msg.answer(lexicon["content_policy_violation_retries_exhausted"])
             await unblock_api_calls(msg, state)
             return
+        await preloader.edit_text(preloader_text.replace('...', ' ✅'))
+        
         await msg.answer_photo(photo)
         await msg.answer_voice(tts(explanation, ambience_path="src/ambience/cheerful.mp3"))
         await msg.answer(lexicon["take_action"])
