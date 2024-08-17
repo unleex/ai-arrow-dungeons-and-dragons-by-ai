@@ -8,6 +8,7 @@ from aiogram.fsm.storage.base import StorageKey
 
 
 class FSMStates(StatesGroup):
+    waiting = State()
     creating_heroes = State()
     generating_adventure = State()
     DnD_is_adventure_ok_choosing = State()

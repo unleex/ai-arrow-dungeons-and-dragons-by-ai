@@ -2,17 +2,13 @@ from keyboards.set_menu import set_main_menu
 from lexicon.lexicon import LEXICON_RU
 from states.states import FSMStates
 
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import default_state, any_state
 from aiogram.types import Message
-
-
 lexicon = LEXICON_RU
 rt = Router()
-
-
 @rt.message(F.chat.type=="private", StateFilter(default_state))
 async def not_in_group_handler(msg: Message):
     await msg.answer(lexicon["not_in_group"])
@@ -40,9 +36,9 @@ async def get_states(msg: Message):
     await msg.answer(str(states))
 
 
-@rt.message(Command("unblock"))
+@rt.message(Command("unlock"))
 async def unblock_api_calls(msg: Message, state: FSMContext):
     ctx = await state.get_data()
     ctx["prompt_sent"] = False
     await state.set_data(ctx)
-    await msg.answer("unlocked")
+    await msg.answer(lexicon["unblocked_api_calls"])

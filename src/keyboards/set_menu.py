@@ -30,6 +30,10 @@ async def set_game_menu(chat_id: int | None = None):
         BotCommand(
             command="master",
             description=lexicon["master_command_description"]
+        ),
+        BotCommand(
+            command="stats",
+            description=lexicon["stats_command_description"]
         )
     ]
     await bot.set_my_commands(game_menu, BotCommandScopeChat(chat_id=chat_id) if chat_id else BotCommandScopeDefault())
