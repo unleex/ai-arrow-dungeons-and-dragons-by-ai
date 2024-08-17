@@ -44,9 +44,18 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, chat
     await state.set_data(ctx)
     await msg.answer(lexicon["DnD_generating_adventure"])
     ctx = {"topic": msg.text}
-    await msg.answer(lexicon["adventure_text_preloader"])
-    result = request_to_chatgpt(prompts["DnD_generating_lore"] % ctx["topic"])      
-    await msg.answer(lexicon["adventure_image_preloader"])
+    preloader = await msg.answer(lexicon["text_preloader"])
+    preloader_text = preloader.text
+    result = request_to_chatgpt(prompts["DnD_generating_lore"] % ctx["topic"])
+    await preloader.edit_text(preloader_text.replace('...', ' ✅') + '\n' + lexicon["image_preloader"])
+    preloader_text = preloader.text
+    await preloader.edit_text(preloader_text.replace('...', ' ✅') + '\n' + lexicon["voice_preloader"])
+    preloader_text = preloader.text
+    await preloader.edit_text(preloader_text.replace('...', ' ✅'))
+    #await msg.answer(lexicon["adventure_image_preloader"])
+    photo = get_photo_from_chatgpt(
+        prompt=result[:AMOUNT_OF_TEXT_FOR_PICTURE_GEN]) # not including antagonist part, it raises censorship
+    await msg.answer(lexicon["adventure_voice_preloader"])
     voice = tts(result, ambience_path="src/ambience/anxious.mp3")
     photo, error_code, violation_level = get_photo_from_chatgpt(content=result)
     if violation_level != 2:
