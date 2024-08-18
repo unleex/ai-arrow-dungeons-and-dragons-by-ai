@@ -17,6 +17,10 @@ async def set_main_menu(chat_id: int | None = None):
         BotCommand(
             command="dnd",
             description=lexicon["DnD_command_description"]
+        ),
+        BotCommand(
+            command="help",
+            description=lexicon["help_command_description"]
         )
     ]
     await bot.set_my_commands(main_menu, BotCommandScopeChat(chat_id=chat_id) if chat_id else BotCommandScopeDefault())
@@ -34,6 +38,10 @@ async def set_game_menu(chat_id: int | None = None):
         BotCommand(
             command="stats",
             description=lexicon["stats_command_description"]
+        ),
+        BotCommand(
+            command="help",
+            description=lexicon["help_command_description"]
         )
     ]
     await bot.set_my_commands(game_menu, BotCommandScopeChat(chat_id=chat_id) if chat_id else BotCommandScopeDefault())

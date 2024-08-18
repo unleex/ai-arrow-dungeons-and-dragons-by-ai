@@ -42,3 +42,7 @@ async def unblock_api_calls(msg: Message, state: FSMContext):
     ctx["prompt_sent"] = False
     await state.set_data(ctx)
     await msg.answer(lexicon["unblocked_api_calls"])
+
+@rt.message(Command("help"))
+async def get_help(msg: Message):
+    await msg.answer(lexicon['help_command'])
