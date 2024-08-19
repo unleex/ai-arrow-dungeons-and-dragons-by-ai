@@ -6,6 +6,7 @@ from prompts.prompts import PROMPTS_RU
 from states.states import FSMStates
 
 import os
+import json
 
 from aiogram import F, Router
 from aiogram.filters import StateFilter
@@ -35,14 +36,17 @@ async def counting_players(msg: Message, state: FSMContext):
 @rt.message(F.text, StateFilter(FSMStates.creating_heroes))
 async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
     ctx = await state.get_data()
+
+    if str(msg.from_user.id) in chat_data['heroes']:
+        await msg.answer(lexicon['already_in_db'].format(name=msg.from_user.first_name))
+        return
+
     if ctx.get("prompt_sent", False):
         return # don't let user access gpt while already processing
     ctx["prompt_sent"] = True
     await state.set_data(ctx)
 
-    if str(msg.from_user.id) in chat_data['heroes']:
-        await msg.answer(lexicon['already_in_db'].format(name=msg.from_user.first_name))
-        return
+
 
     #text
     preloader = await msg.answer(lexicon["extracting_hero_data"])
@@ -82,6 +86,8 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
     exp = [0] * 4
     chat_data["experience_data"][str(msg.from_user.id)] = dict(zip(skills, stats)) | dict(zip(skills_exp, exp))
     chat_data['heroes'][str(msg.from_user.id)] = hero_data
+    with open('src/db/chat_database.json', mode='w') as fp:
+            json.dump(chat_data, fp, indent='\t')
     await msg.answer_photo(hero_image)
 
 
@@ -102,6 +108,7 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
         try:
             data = eval(data)
         except Exception as e:
+            await unblock_api_calls(msg, state)
             print(e, data, sep='\n')
             return
         location = data["location"]
@@ -125,7 +132,7 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
             await unblock_api_calls(msg, state)
             return
         await preloader.edit_text(preloader_text.replace('...', ' ✅'))
-        
+
         await msg.answer_photo(photo)
         await msg.answer_voice(tts(explanation, ambience_path="src/ambience/cheerful.mp3"))
         await msg.answer(lexicon["take_action"])
