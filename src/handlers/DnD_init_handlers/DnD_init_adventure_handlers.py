@@ -40,57 +40,41 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, chat
     ctx = await state.get_data()
     if ctx.get("prompt_sent", False):
         return
-    ctx["prompt_sent"] = True
+    ctx.update({"prompt_sent": True, "topic": msg.text})
     await state.set_data(ctx)
-    await msg.answer(lexicon["DnD_generating_adventure"])
-    ctx = {"topic": msg.text}
 
-    #text
+    await msg.answer(lexicon["DnD_generating_adventure"])
+
+    # Прелоадер и генерация текста
     preloader = await msg.answer(lexicon["text_preloader"])
-    preloader_text = preloader.text
     result = request_to_chatgpt(prompts["DnD_generating_lore"] % ctx["topic"])
 
-    #voice
-    preloader = await preloader.edit_text(preloader_text.replace('...', ' ✅') + '\n' + lexicon["voice_preloader"])
-    preloader_text = preloader.text
+    # Обновление прелоадера и генерация голосового сообщения
+    preloader = await preloader.edit_text(f"{preloader.text.replace('...', ' ✅')}\n{lexicon['voice_preloader']}")
     voice = tts(result, ambience_path="src/ambience/anxious.mp3")
 
+    # Обновление прелоадера и генерация изображения
+    preloader = await preloader.edit_text(f"{preloader.text.replace('...', ' ✅')}\n{lexicon['image_preloader']}")
+    prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_from_photo"] % result)
+    photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
+    await preloader.edit_text(preloader.text.replace('...', ' ✅'))
 
-    #photo
-    preloader = await preloader.edit_text(preloader_text.replace('...', ' ✅') + '\n' + lexicon["image_preloader"])
-    preloader_text = preloader.text
-
-
-    photo, error_code, violation_level = get_photo_from_chatgpt(content=result)
-    if violation_level != 2:
-        if violation_level == 1:
-            await msg.answer(lexicon["content_policy_violation_warning"])
-        if error_code == 2:
-            await msg.answer(lexicon["openai_error_warning"])
-            await unblock_api_calls(msg, state)
-            await FSMStates.clear_chat_state(msg.chat.id)
-    else:
+    # Обработка ошибок изображения
+    if violation_level == 2:
         await msg.answer(lexicon["content_policy_violation_warning"])
         await msg.answer(lexicon["content_policy_violation_retries_exhausted"])
-        await unblock_api_calls(msg, state)
-        return
+    elif error_code == 2:
+        await msg.answer(lexicon["openai_error_warning"])
+    else:
+        if violation_level == 1:
+            await msg.answer(lexicon["content_policy_violation_warning"])
+        await msg.answer_photo(photo)
+        await msg.answer_voice(voice)
 
-    await preloader.edit_text(preloader_text.replace('...', ' ✅'))
-    #await msg.answer(lexicon["adventure_image_preloader"])
-#     result = """Недавно, Элгар, несчастный зять древнего клана магов, обнаружил что-то необычное в шкафу своей свекрови. Там глубоко спрятаны были драгоценности и редкие артефакты, а ещё несколько старинных свитков. Элгар, увлекшись изучением свитков, обнаружил, что те были дневниками Мелиндры, предка своей жены и мощного мага, битву с которым вспоминали по всему королевству.
-# Мелиндра всю жизнь была фанатично увлечена драконами. Она изучала их природу, потребности, образ жизни, и даже смогла наладить контакт с некоторыми из них. Однако, под влиянием злого чародея, она была обманута, и её знания и исследования были использованы для неправильных целей. Злодей превратил драконов в свою личную армию, и развязал войну против королевства.
-# Чуя измену, Мелиндра подступила к злодею и наложила на него проклятие, которое приковало его душу к шкафу. Однако, вступив в схватку с могущественным драконом, Мелиндра погибла, не успев рассказать о своем замысле другим магам клана.
-# Элгар, узнав о своей ответственности, предположил, что проклятье Мелиндры все еще связывает драконов с шкафом. Осознав важность своей миссии, он начал готовиться к предстоящей войне. Элгар обратился за помощью к другим магам, воинам и героям, несмотря на их первоначальное недоверие, они поняли серьезность ситуации и присоединились к нему.
-# И вот теперь, эти герои, лицом к лицу со страшной угрозой, готовы разгадать тайны древних свитков, изучить шкаф у тещи эльфийского мага и остановить предстоящую войну с драконами."""
-    await msg.answer_photo(photo)
-    #await msg.answer(result) # translate to restrict model using markdown chars, avoiding bugs
-    await msg.answer_voice(voice)
+    # Финальное обновление прелоадера и завершение генерации
 
-    await msg.answer(lexicon["DnD_is_adventure_ok"],
-                     reply_markup=DnD_is_adventure_ok_kb,
-                     resize_keyboard=False)
+    await msg.answer(lexicon["DnD_is_adventure_ok"], reply_markup=DnD_is_adventure_ok_kb, resize_keyboard=False)
     await state.set_state(FSMStates.DnD_is_adventure_ok_choosing)
-    await state.set_data(ctx)
     chat_data["lore"] = result
     ctx["prompt_sent"] = False
     await state.set_data(ctx)
@@ -103,39 +87,77 @@ async def DnD_is_adventure_ok_yes_handler(clb: CallbackQuery, state: FSMContext)
 
 
 
-@rt.callback_query(F.data=="DnD_is_adventure_ok_no", StateFilter(FSMStates.DnD_is_adventure_ok_choosing))
+@rt.callback_query(F.data == "DnD_is_adventure_ok_no", StateFilter(FSMStates.DnD_is_adventure_ok_choosing))
 async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, translate_dict: dict, chat_data: dict):
     ctx = await state.get_data()
+
+    # Проверка на повторный запрос к GPT
     if ctx.get("prompt_sent", False):
-        return
+        return  # предотвращает повторный запрос к GPT во время обработки
     ctx["prompt_sent"] = True
     await state.set_data(ctx)
-    await clb.message.answer(lexicon["DnD_is_adventure_ok_no"])
-    result = request_to_chatgpt(
-        prompts["DnD_generating_lore"] % chat_data["lore"]).translate(
-            translate_dict
-        )  # translate to restrict model using markdown chars, avoiding bugs
-    photo, error_code, violation_level = get_photo_from_chatgpt(content=result)
-    voice = tts(result, ambience_path="src/ambience/anxious.mp3")
-    if violation_level != 2:
-        if violation_level == 1:
-            await clb.message.answer(lexicon["content_policy_violation_warning"])
-        if error_code == 2:
-            await clb.message.answer(lexicon["openai_error_warning"])
-            await unblock_api_calls(clb.message, state)
-            await FSMStates.clear_chat_state(clb.message.chat.id)
-    else:
-        await clb.message.answer(lexicon["content_policy_violation_warning"])
-        await clb.message.answer(lexicon["content_policy_violation_retries_exhausted"])
-        await unblock_api_calls(clb.message, state)
+
+    try:
+        # Ответное сообщение пользователю
+        await clb.message.answer(lexicon["DnD_is_adventure_ok_no"])
+
+        # Генерация лора и перевод
+        preloader = await clb.message.answer(lexicon["text_preloader"])
+        result = await generate_and_translate_lore(chat_data["lore"], translate_dict)
+        preloader = await update_preloader(preloader, lexicon["image_preloader"])
+
+        # Генерация изображения и голоса
+        prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_from_photo"] % result)
+        photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
+
+
+        if not await handle_image_errors(clb.message, state, error_code, violation_level):
+            print('ERROR ----------------------------------------------------------------------------------------')
+            return
+
+        preloader = await update_preloader(preloader, lexicon["voice_preloader"])
+        voice = tts(result, ambience_path="src/ambience/anxious.mp3")
+        preloader = await preloader.edit_text(preloader.text.replace('...', ' ✅'))
+
+
+        # Отправка изображения, голоса и клавиатуры с выбором
+        await clb.message.answer_photo(photo)
+        await clb.message.answer_voice(voice)
+        await clb.message.answer(
+            lexicon["DnD_is_adventure_ok"],
+            reply_markup=DnD_is_adventure_ok_kb,
+            resize_keyboard=False
+        )
+    finally:
+        # Сброс флага после завершения обработки
         ctx["prompt_sent"] = False
         await state.set_data(ctx)
-        return
-    #await clb.message.answer(result)
-    await clb.message.answer_photo(photo)
-    await clb.message.answer_voice(voice)
-    await clb.message.answer(lexicon["DnD_is_adventure_ok"],
-                     reply_markup=DnD_is_adventure_ok_kb,
-                     resize_keyboard=False)
-    ctx["prompt_sent"] = False
-    await state.set_data(ctx)
+
+
+async def generate_and_translate_lore(lore, translate_dict):
+    """Генерирует лор и переводит его для предотвращения ошибок с Markdown."""
+    result = request_to_chatgpt(prompts["DnD_generating_lore"] % lore)
+    return result.translate(translate_dict)
+
+
+async def handle_image_errors(message, state, error_code, violation_level):
+    """Обрабатывает ошибки, связанные с изображением."""
+    if violation_level != 2:
+        if violation_level == 1:
+            await message.answer(lexicon["content_policy_violation_warning"])
+        if error_code == 2:
+            await message.answer(lexicon["openai_error_warning"])
+            await unblock_api_calls(message, state)
+            await FSMStates.clear_chat_state(message.chat.id)
+            return False
+    else:
+        await message.answer(lexicon["content_policy_violation_warning"])
+        await message.answer(lexicon["content_policy_violation_retries_exhausted"])
+        await unblock_api_calls(message, state)
+        return False
+    return True
+
+
+async def update_preloader(preloader, next_step_text):
+    """Обновляет текст прелоадера."""
+    return await preloader.edit_text(preloader.text.replace('...', ' ✅') + '\n' + next_step_text)
