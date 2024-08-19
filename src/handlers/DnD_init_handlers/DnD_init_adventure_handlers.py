@@ -55,7 +55,7 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, chat
 
     # Обновление прелоадера и генерация изображения
     preloader = await preloader.edit_text(f"{preloader.text.replace('...', ' ✅')}\n{lexicon['image_preloader']}")
-    prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_from_photo"] % result)
+    prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_for_photo"] % result)
     photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
     await preloader.edit_text(preloader.text.replace('...', ' ✅'))
 
@@ -107,7 +107,7 @@ async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, 
         preloader = await update_preloader(preloader, lexicon["image_preloader"])
 
         # Генерация изображения и голоса
-        prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_from_photo"] % result)
+        prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_for_photo"] % result)
         photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
 
 
