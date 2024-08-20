@@ -10,7 +10,7 @@ from prompts.functions import (request_to_chatgpt, process_action,tts,
                                finish_action, ACTION_RELEVANCE_FOR_MISSION)
 from states.states import FSMStates
 
-from copy import copy
+import logging
 from random import randint
 
 from aiogram import F, Router
@@ -20,6 +20,7 @@ from aiogram.types import CallbackQuery, Message, FSInputFile
 import asyncio
 
 
+logger = logging.getLogger(__name__)
 rt = Router()
 MAX_TOKENS = 1000
 NEW_MISSION_CHANCE = 0.2
@@ -29,79 +30,67 @@ ROLLING_SLEEP_TIME = 3
 required_experience = dict(zip(range(20), [10] * 19 + [float("inf")])) # in every level it is 10, 21+ level is unreachable
 
 
-@rt.message(StateFilter(FSMStates.DnD_default_state))
-async def maybe_generate_mission(msg: Message, translate_dict: dict, chat_data: dict):
-    if randint(0,100) / 100 < NEW_MISSION_CHANCE:
-        result = request_to_chatgpt(prompts["DnD_generating_adventure"].format(
-                adventure=chat_data["lore"],
-                recent_actions='\n'.join(
-                chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]),
-                location="random location")).translate(translate_dict)
-    await msg.answer(result) # translate to restrict model using markdown chars, avoiding bugs
-    await FSMStates.multiset_state(chat_data["heroes"], msg.chat.id, FSMStates.DnD_taking_action)
-    await msg.answer(lexicon["take_action"])
-
-
 @rt.message(Command("action"), StateFilter(FSMStates.DnD_taking_action))
 async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
     ctx = await state.get_data()
     if ctx.get("prompt_sent", False):
         return # don't let user access gpt while already processing
-    if "user_msg_id" in ctx:
-        user_msg_id = str(ctx["user_msg_id"])
-        del ctx["user_msg_id"]
-    else:
-        user_msg_id = str(msg.from_user.id)
-    if "transcripted" in ctx:
-        topic = ctx["transcripted"]
-        del ctx["transcripted"]
-    else:
-        topic = msg.text
-    transcription_addon = lexicon["transcripted"].replace("%s", '')
-    topic = topic.replace("/action", '').replace(BOT_USERNAME,'').replace(transcription_addon, '')
-    if not topic.replace(' ',''):
-        await msg.answer(lexicon["action_empty"])   
-        await state.set_state(FSMStates.DnD_adding_action)
-        return
-    ctx["prompt_sent"] = True
-    await state.set_data(ctx)
-    await msg.answer(lexicon["master_answering"] % chat_data["heroes"][user_msg_id]["name"])
-    check_type = request_to_chatgpt(prompts["action_is_roll_required"].format(
-                action=topic,
-                recent_actions='\n'.join(
-                    chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]
-                    ),
-                hero_data=chat_data["heroes"][user_msg_id])
-    )
-    ctx["prompt_sent"] = False
-    await state.set_data(ctx)
-    ctx = await state.get_data()
-    ctx["user_msg_id"] = user_msg_id
-    ctx["topic"] = topic
-    if check_type[:2] == "-1":
-        invalidation_reason = check_type[2:]
-        voice = tts(invalidation_reason)
-        await msg.answer_voice(voice)
-        chat_data["actions"].append(topic)
-        chat_data["actions"].append(invalidation_reason)
-        await finish_action(topic, chat_data, msg, state, user_msg_id)
-        return
-    elif check_type[0] == "0":
-        ctx["roll_result"] = 20
-    else:
-        ctx["check_type"] = check_type
-        await msg.answer(lexicon["roll"] % check_type,
-                        reply_markup=roll_kb,
-                        resize_keyboard=False
+    try:
+        await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": True})
+        if "user_msg_id" in ctx:
+            user_msg_id = str(ctx["user_msg_id"])
+            del ctx["user_msg_id"]
+            logger.info(f"found user msg id in ctx: {user_msg_id}")
+        else:
+            user_msg_id = str(msg.from_user.id)
+        if "transcripted" in ctx:
+            topic = ctx["transcripted"]
+            del ctx["transcripted"]
+        else:
+            topic = msg.text
+        transcription_addon = lexicon["transcripted"].replace("%s", '')
+        topic = topic.replace("/action", '').replace(BOT_USERNAME,'').replace(transcription_addon, '')
+        if not topic.replace(' ',''):
+            await msg.answer(lexicon["action_empty"])   
+            await state.set_state(FSMStates.DnD_adding_action)
+            return
+        await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": True})
+        logger.info(f"checking skill type {user_msg_id}")
+        await msg.answer(lexicon["master_answering"] % chat_data["heroes"][user_msg_id]["name"])
+        check_type = request_to_chatgpt(prompts["action_is_roll_required"].format(
+                    action=topic,
+                    recent_actions='\n'.join(
+                        chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]
+                        ),
+                    hero_data=chat_data["heroes"][user_msg_id])
         )
+        await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": False})
         await state.set_data(ctx)
-        await state.set_state(FSMStates.rolling)
-        return
-    await state.set_data(ctx)
-    await process_action(topic, chat_data, msg, state, user_id=msg.from_user.id)
-    ctx = await state.get_data()
-    ctx["prompt_sent"] = False
-    await state.set_data(ctx)
+        ctx["user_msg_id"] = user_msg_id
+        ctx["topic"] = topic
+        if check_type[:2] == "-1":
+            invalidation_reason = check_type[2:]
+            voice = tts(invalidation_reason)
+            await msg.answer_voice(voice)
+            chat_data["actions"].append(topic)
+            chat_data["actions"].append(invalidation_reason)
+            await finish_action(topic, chat_data, msg, state, user_msg_id)
+            return
+        elif check_type[0] == "0":
+            ctx["roll_result"] = 20
+        else:
+            ctx["check_type"] = check_type
+            await msg.answer(lexicon["roll"] % check_type,
+                            reply_markup=roll_kb,
+                            resize_keyboard=False
+            )
+            await state.set_data(ctx)
+            await state.set_state(FSMStates.rolling)
+            return
+        await state.set_data(ctx)
+        await process_action(topic, chat_data, msg, state, user_id=msg.from_user.id)
+    finally:
+        await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": False})
 
 
 @rt.message(F.text | F.voice, StateFilter(FSMStates.DnD_adding_action))
@@ -128,7 +117,7 @@ async def rolling(clb: CallbackQuery, state: FSMContext, chat_data: dict):
     check_type = ctx["check_type"]
     if ctx.get("prompt_sent", False):
         return # don't let user access gpt while already processing
-    ctx["prompt_sent"] = True
+    await FSMStates.set_chat_data(clb.message.chat.id, {"prompt_sent": True})
     await state.set_data(ctx)
     level = int(request_to_chatgpt(
         prompts["action_gained_experience_amount"] % ctx["topic"]
@@ -160,13 +149,13 @@ async def rolling(clb: CallbackQuery, state: FSMContext, chat_data: dict):
                                                                     gained_experience=gained_experience,
                                                                     left_to_new_level=(exp_required-new_exp))
     ctx["upgrade_message"] = upgrade_message
-    ctx["prompt_sent"] = False
+    await FSMStates.set_chat_data(clb.message.chat.id, {"prompt_sent": False})
     topic = ctx["topic"]
     ctx["roll_result"] = result
     ctx["level"] = level
     await state.set_data(ctx)
     await process_action(topic, chat_data, clb.message, state, user_id=user_msg_id)
-    ctx["prompt_sent"] = False
+    await FSMStates.set_chat_data(clb.message.chat.id, {"prompt_sent": False})
     await state.set_data(ctx)
 
 
@@ -176,7 +165,7 @@ async def master(msg: Message, state: FSMContext, chat_data: dict):
         return
     ctx = await state.get_data()
     ctx["state_before_master"] = await state.get_state()
-    ctx["prompt_sent"] = False
+    await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": False})
     if ctx.get("prompt_sent", False):
         return # don't let user access gpt while already processing
     if "user_msg_id" in ctx:
@@ -196,7 +185,7 @@ async def master(msg: Message, state: FSMContext, chat_data: dict):
         await state.set_state(FSMStates.DnD_adding_master)
         await state.set_data(ctx)
         return
-    ctx["prompt_sent"] = True
+    await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": True})
     await state.set_data(ctx)
     await msg.answer(lexicon["master_answering"] % chat_data["heroes"][user_msg_id]["name"])
     result = request_to_chatgpt(prompts["DnD_master"].format(
@@ -205,7 +194,7 @@ async def master(msg: Message, state: FSMContext, chat_data: dict):
                 chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]),
                 hero_data=chat_data["heroes"][user_msg_id])              
     )
-    ctx["prompt_sent"] = False
+    await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": False})
     await msg.answer(result)
     chat_data["actions"].append(topic)
     chat_data["actions"].append(result)

@@ -17,8 +17,7 @@ async def not_in_group_handler(msg: Message):
 @rt.message(Command("cancel"), StateFilter(any_state))
 async def cancel_handler(msg: Message):
     await msg.answer(lexicon["cancel_handler"])
-    await FSMStates.clear_chat_data(msg.chat.id)
-    await FSMStates.clear_chat_state(msg.chat.id)
+    await FSMStates.clear_chat(msg.chat.id)
     await set_main_menu(msg.chat.id)
 
 
@@ -38,9 +37,7 @@ async def get_states(msg: Message):
 
 @rt.message(Command("unlock"))
 async def unblock_api_calls(msg: Message, state: FSMContext):
-    ctx = await state.get_data()
-    ctx["prompt_sent"] = False
-    await state.set_data(ctx)
+    await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": False})
     await msg.answer(lexicon["unblocked_api_calls"])
 
 @rt.message(Command("help"))

@@ -11,7 +11,7 @@ from middlewares.middlewares import DataBaseAccessor
 
 
 async def main():
-    # logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     translate_syms_dict = {'*':'','_': '', '<': '', '>': '', '/': ''}
     dp['translate_dict'] = translate_syms_dict
 

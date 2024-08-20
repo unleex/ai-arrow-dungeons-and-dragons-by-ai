@@ -4,10 +4,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from keyboards.keyboards import DnD_is_adventure_ok_kb
 from keyboards.set_menu import set_main_menu
 from lexicon.lexicon import LEXICON_RU
-from handlers.other_handlers import unblock_api_calls
 from prompts.prompts import PROMPTS_RU
 from prompts.functions import request_to_chatgpt, get_photo_from_chatgpt, tts
 from states.states import FSMStates
+from utils.utils import handle_image_errors
 
 from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
@@ -40,44 +40,32 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, chat
     ctx = await state.get_data()
     if ctx.get("prompt_sent", False):
         return
-    ctx.update({"prompt_sent": True, "topic": msg.text})
-    await state.set_data(ctx)
+    try:
+        ctx.update({"topic": msg.text, "prompt_sent": True})
+        await FSMStates.set_chat_data(msg.chat.id, ctx)
 
-    await msg.answer(lexicon["DnD_generating_adventure"])
+        await msg.answer(lexicon["DnD_generating_adventure"])
 
-    # Прелоадер и генерация текста
-    preloader = await msg.answer(lexicon["text_preloader"])
-    result = request_to_chatgpt(prompts["DnD_generating_lore"] % ctx["topic"])
+        preloader = await msg.answer(lexicon["text_preloader"])
+        result = request_to_chatgpt(prompts["DnD_generating_lore"] % ctx["topic"])
 
-    # Обновление прелоадера и генерация голосового сообщения
-    preloader = await preloader.edit_text(f"{preloader.text.replace('...', ' ✅')}\n{lexicon['voice_preloader']}")
-    voice = tts(result, ambience_path="src/ambience/anxious.mp3")
+        preloader = await preloader.edit_text(f"{preloader.text.replace('...', ' ✅')}\n{lexicon['voice_preloader']}")
+        voice = tts(result, ambience_path="src/ambience/anxious.mp3")
 
-    # Обновление прелоадера и генерация изображения
-    preloader = await preloader.edit_text(f"{preloader.text.replace('...', ' ✅')}\n{lexicon['image_preloader']}")
-    prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_from_photo"] % result)
-    photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
-    await preloader.edit_text(preloader.text.replace('...', ' ✅'))
+        preloader = await preloader.edit_text(f"{preloader.text.replace('...', ' ✅')}\n{lexicon['image_preloader']}")
+        prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_from_photo"] % result)
+        photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
+        if not await handle_image_errors(msg, state, error_code, violation_level):
+            return
+        await preloader.edit_text(preloader.text.replace('...', ' ✅'))
 
-    # Обработка ошибок изображения
-    if violation_level == 2:
-        await msg.answer(lexicon["content_policy_violation_warning"])
-        await msg.answer(lexicon["content_policy_violation_retries_exhausted"])
-    elif error_code == 2:
-        await msg.answer(lexicon["openai_error_warning"])
-    else:
-        if violation_level == 1:
-            await msg.answer(lexicon["content_policy_violation_warning"])
         await msg.answer_photo(photo)
         await msg.answer_voice(voice)
-
-    # Финальное обновление прелоадера и завершение генерации
-
-    await msg.answer(lexicon["DnD_is_adventure_ok"], reply_markup=DnD_is_adventure_ok_kb, resize_keyboard=False)
-    await state.set_state(FSMStates.DnD_is_adventure_ok_choosing)
-    chat_data["lore"] = result
-    ctx["prompt_sent"] = False
-    await state.set_data(ctx)
+        await msg.answer(lexicon["DnD_is_adventure_ok"], reply_markup=DnD_is_adventure_ok_kb, resize_keyboard=False)
+        await state.set_state(FSMStates.DnD_is_adventure_ok_choosing)
+        chat_data["lore"] = result
+    finally:
+        await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": False})
 
 
 @rt.callback_query(F.data=="DnD_is_adventure_ok_yes", StateFilter(FSMStates.DnD_is_adventure_ok_choosing))
@@ -90,37 +78,25 @@ async def DnD_is_adventure_ok_yes_handler(clb: CallbackQuery, state: FSMContext)
 @rt.callback_query(F.data == "DnD_is_adventure_ok_no", StateFilter(FSMStates.DnD_is_adventure_ok_choosing))
 async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, translate_dict: dict, chat_data: dict):
     ctx = await state.get_data()
-
-    # Проверка на повторный запрос к GPT
     if ctx.get("prompt_sent", False):
-        return  # предотвращает повторный запрос к GPT во время обработки
-    ctx["prompt_sent"] = True
-    await state.set_data(ctx)
-
+        return # drop update if openai api call is already pending
     try:
-        # Ответное сообщение пользователю
+        await FSMStates.set_chat_data(clb.message.chat.id, {"prompt_sent": True})
+        await state.set_data(ctx)
         await clb.message.answer(lexicon["DnD_is_adventure_ok_no"])
 
-        # Генерация лора и перевод
         preloader = await clb.message.answer(lexicon["text_preloader"])
-        result = await generate_and_translate_lore(chat_data["lore"], translate_dict)
+        result = request_to_chatgpt(prompts["DnD_generating_lore"] % chat_data["lore"])
         preloader = await update_preloader(preloader, lexicon["image_preloader"])
 
-        # Генерация изображения и голоса
         prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_from_photo"] % result)
         photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
-
-
-        if not await handle_image_errors(clb.message, state, error_code, violation_level):
-            print('ERROR ----------------------------------------------------------------------------------------')
-            return
+        await handle_image_errors(clb.message, state, error_code, violation_level)
 
         preloader = await update_preloader(preloader, lexicon["voice_preloader"])
         voice = tts(result, ambience_path="src/ambience/anxious.mp3")
         preloader = await preloader.edit_text(preloader.text.replace('...', ' ✅'))
 
-
-        # Отправка изображения, голоса и клавиатуры с выбором
         await clb.message.answer_photo(photo)
         await clb.message.answer_voice(voice)
         await clb.message.answer(
@@ -129,35 +105,8 @@ async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, 
             resize_keyboard=False
         )
     finally:
-        # Сброс флага после завершения обработки
-        ctx["prompt_sent"] = False
+        await FSMStates.set_chat_data(clb.message.chat.id, {"prompt_sent": False})
         await state.set_data(ctx)
 
-
-async def generate_and_translate_lore(lore, translate_dict):
-    """Генерирует лор и переводит его для предотвращения ошибок с Markdown."""
-    result = request_to_chatgpt(prompts["DnD_generating_lore"] % lore)
-    return result.translate(translate_dict)
-
-
-async def handle_image_errors(message, state, error_code, violation_level):
-    """Обрабатывает ошибки, связанные с изображением."""
-    if violation_level != 2:
-        if violation_level == 1:
-            await message.answer(lexicon["content_policy_violation_warning"])
-        if error_code == 2:
-            await message.answer(lexicon["openai_error_warning"])
-            await unblock_api_calls(message, state)
-            await FSMStates.clear_chat_state(message.chat.id)
-            return False
-    else:
-        await message.answer(lexicon["content_policy_violation_warning"])
-        await message.answer(lexicon["content_policy_violation_retries_exhausted"])
-        await unblock_api_calls(message, state)
-        return False
-    return True
-
-
 async def update_preloader(preloader, next_step_text):
-    """Обновляет текст прелоадера."""
     return await preloader.edit_text(preloader.text.replace('...', ' ✅') + '\n' + next_step_text)

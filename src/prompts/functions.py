@@ -6,6 +6,7 @@ from lexicon.lexicon import LEXICON_RU
 from handlers.other_handlers import unblock_api_calls
 from prompts.prompts import PROMPTS_RU
 from states.states import FSMStates
+from utils.utils import handle_image_errors
 
 from random import randint
 import requests
@@ -153,23 +154,12 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
     if int(game_end[0]):
         photo, error_code, violation_level = get_photo_from_chatgpt(content=game_end[1:])
         voice = tts(game_end[1:], ambience_path="src/ambience/cheerful.mp3")
-        if violation_level != 2:
-            if violation_level == 1:
-                await msg.answer(lexicon["content_policy_violation_warning"])
-                await unblock_api_calls(msg, state)
-            if error_code == 2:
-                await msg.answer(lexicon["openai_error_warning"])
-                await unblock_api_calls(msg, state)
-                await FSMStates.clear_chat_state(msg.chat.id)
-        else:
-            await msg.answer(lexicon["content_policy_violation_warning"])
-            await msg.answer(lexicon["content_policy_violation_retries_exhausted"])
-            await unblock_api_calls(msg, state)
+        if not await handle_image_errors(msg, state, error_code, violation_level):
             return
         await msg.answer_photo(photo)
         await msg.answer(game_end[1:])
         await msg.answer_voice(voice)
-        await FSMStates.clear(msg.chat.id)
+        await FSMStates.clear_chat(msg.chat.id)
         return
     states: dict[str, str] = await FSMStates.multiget_states(str(msg.chat.id), chat_data["heroes"])
     if all([st == "FSMStates:" + FSMStates.DnD_took_action._state for st in list(states.values())]):
@@ -185,24 +175,14 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
         chat_data["actions"].append(turn_end)
         voice = tts(turn_end, ambience_path="src/ambience/cheerful.mp3")
         photo, error_code, violation_level = get_photo_from_chatgpt(content=turn_end)
-        if violation_level != 2:
-            if violation_level == 1:
-                await msg.answer(lexicon["content_policy_violation_warning"])
-                await unblock_api_calls(msg, state)
-            if error_code == 2:
-                await msg.answer(lexicon["openai_error_warning"])
-                await unblock_api_calls(msg, state)
-                await FSMStates.clear_chat_state(msg.chat.id)
-        else:
-            await msg.answer(lexicon["content_policy_violation_warning"])
-            await msg.answer(lexicon["content_policy_violation_retries_exhausted"])
-            await unblock_api_calls(msg, state)
+        if not await handle_image_errors(msg, state, error_code, violation_level):
             return
         #await msg.answer(turn_end)
         await msg.answer_voice(voice)
         await msg.answer_photo(photo)
         await msg.answer(lexicon["take_action"])
         await FSMStates.multiset_state(chat_data["heroes"], msg.chat.id, FSMStates.DnD_taking_action)
+        await FSMStates.clear_chat_data(msg.chat.id)
     else:
         await msg.answer(lexicon["wait_other_players"] % chat_data["heroes"][user_id]["name"])
 
