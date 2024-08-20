@@ -7,7 +7,7 @@ from lexicon.lexicon import LEXICON_RU
 from prompts.prompts import PROMPTS_RU
 from prompts.functions import request_to_chatgpt, get_photo_from_chatgpt, tts
 from states.states import FSMStates
-from utils.utils import handle_image_errors
+from utils.utils import handle_image_errors, update_preloader
 
 from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
@@ -53,7 +53,7 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, chat
         voice = tts(result, ambience_path="src/ambience/anxious.mp3")
 
         preloader = await preloader.edit_text(f"{preloader.text.replace('...', ' ✅')}\n{lexicon['image_preloader']}")
-        prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_from_photo"] % result)
+        prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_for_photo"] % result)
         photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
         if not await handle_image_errors(msg, state, error_code, violation_level):
             return
@@ -89,7 +89,7 @@ async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, 
         result = request_to_chatgpt(prompts["DnD_generating_lore"] % chat_data["lore"])
         preloader = await update_preloader(preloader, lexicon["image_preloader"])
 
-        prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_from_photo"] % result)
+        prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_for_photo"] % result)
         photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
         await handle_image_errors(clb.message, state, error_code, violation_level)
 
@@ -107,6 +107,3 @@ async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, 
     finally:
         await FSMStates.set_chat_data(clb.message.chat.id, {"prompt_sent": False})
         await state.set_data(ctx)
-
-async def update_preloader(preloader, next_step_text):
-    return await preloader.edit_text(preloader.text.replace('...', ' ✅') + '\n' + next_step_text)

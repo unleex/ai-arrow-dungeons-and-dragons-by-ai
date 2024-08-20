@@ -68,7 +68,7 @@ def get_photo_from_chatgpt(content: str,
             print("retry")
             response, is_failed, is_violation = get_photo_from_chatgpt(
                 content, target_path, model,
-                modify_prompt, raw_output=True, 
+                modify_prompt, raw_output=True,
                 is_violation=is_violation
             )
         else:
@@ -78,7 +78,7 @@ def get_photo_from_chatgpt(content: str,
         return (None, 1, is_violation)
     if is_failed == 2:
         (None, 2, is_violation)
-    
+
     image_url = response.data[0].url
     image_response = requests.get(image_url)
     filename = f"generated_image.png"
@@ -152,7 +152,8 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
         )
     ))
     if int(game_end[0]):
-        photo, error_code, violation_level = get_photo_from_chatgpt(content=game_end[1:])
+        prompt_for_photo = request_to_chatgpt(content=prompts["extract_prompt_for_photo"] % game_end[1:])
+        photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
         voice = tts(game_end[1:], ambience_path="src/ambience/cheerful.mp3")
         if not await handle_image_errors(msg, state, error_code, violation_level):
             return
@@ -174,7 +175,8 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
         )
         chat_data["actions"].append(turn_end)
         voice = tts(turn_end, ambience_path="src/ambience/cheerful.mp3")
-        photo, error_code, violation_level = get_photo_from_chatgpt(content=turn_end)
+        prompt_for_photo = request_to_chatgpt(content=prompts["extract_prompt_for_photo"] % turn_end)
+        photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
         if not await handle_image_errors(msg, state, error_code, violation_level):
             return
         #await msg.answer(turn_end)

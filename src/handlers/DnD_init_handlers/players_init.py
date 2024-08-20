@@ -61,8 +61,9 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
             return
         
         preloader = await update_preloader(preloader, lexicon["hero_image_preloader"])
+        prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_for_hero"] % result)
         hero_image, error_code, violation_level = get_photo_from_chatgpt(
-            content=result, target_path=f"src/hero_images/{msg.from_user.id}_hero.png"
+            content=prompt_for_photo, target_path=f"src/hero_images/{msg.from_user.id}_hero.png"
         )
         if not await handle_image_errors(msg, state, error_code, violation_level):
             return
@@ -100,8 +101,10 @@ async def start_game(msg: Message, chat_data, state: FSMContext):
 
         location, explanation = data["location"], data["explanation"]
 
+
         preloader = await update_preloader(preloader, lexicon["image_preloader"])
-        photo, error_code, violation_level = get_photo_from_chatgpt(content=location)
+        prompt_for_photo = request_to_chatgpt(content=prompts["extract_prompt_for_photo"] % explanation)
+        photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
         if not await handle_image_errors(msg, state, error_code, violation_level):
             return
 
