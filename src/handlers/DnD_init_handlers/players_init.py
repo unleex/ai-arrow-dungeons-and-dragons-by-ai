@@ -39,7 +39,10 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
 
     # Проверка на существование героя в базе данных
     if str(msg.from_user.id) in chat_data['heroes']:
-        await msg.answer(lexicon['already_in_db'].format(name=msg.from_user.first_name))
+        if not ctx.get("notified", False):
+            await msg.answer(lexicon['already_in_db'].format(name=msg.from_user.first_name))
+            ctx["notified"] = True
+            await state.set_data(ctx)
         return
 
     # Проверка на повторный запрос к GPT
