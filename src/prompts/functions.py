@@ -184,9 +184,12 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
             max_tokens=1000
         )
         chat_data["actions"].append(turn_end)
+        preloader = await msg.answer(text=lexicon["voice_preloader"])
         voice = tts(turn_end, ambience_path="src/ambience/cheerful.mp3")
+        preloader = update_preloader(preloader, lexicon["voice_preloader"])
         prompt_for_photo = request_to_chatgpt(content=prompts["extract_prompt_for_photo"] % turn_end)
         photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
+        await preloader.edit_text(preloader.text.replace('...', ' ✅'))
         if violation_level != 2:
             if violation_level == 1:
                 await msg.answer(lexicon["content_policy_violation_warning"])
@@ -230,3 +233,8 @@ async def process_action(topic, chat_data: dict, msg: Message, state: FSMContext
     chat_data["actions"].append(topic)
     chat_data["actions"].append(result)
     await finish_action(topic, chat_data, msg, state, user_id)
+
+
+async def update_preloader(preloader, next_step_text):
+    """Обновляет текст прелоадера."""
+    return await preloader.edit_text(preloader.text.replace('...', ' ✅') + '\n' + next_step_text)
