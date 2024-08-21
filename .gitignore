@@ -9,7 +9,7 @@ src/generated_images/*
 src/newtest.py
 src/audios_for_stt
 src/generated_audio/*
-#src/db
+src/db
 src/hero_images
 src/audios_for_stt/*
-!.gitkeep
+!.gitkeep 
