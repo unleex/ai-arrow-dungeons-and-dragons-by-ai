@@ -126,6 +126,10 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
     if not user_id:
         user_id = msg.from_user.id
     user_id = str(user_id)
+
+    preloader = Preloader(msg, ["plot", "voice", "image"])
+
+    await preloader.update()
     updated = request_to_chatgpt(prompts["update_after_action"].format(
         action=topic,
         hero_data=chat_data["heroes"][user_id],
@@ -175,7 +179,7 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
         )
         chat_data["actions"].append(turn_end)
 
-        preloader = Preloader(msg, ["voice", "image"])
+        
 
         await preloader.update()
         voice = tts(turn_end, ambience_path="src/ambience/cheerful.mp3")

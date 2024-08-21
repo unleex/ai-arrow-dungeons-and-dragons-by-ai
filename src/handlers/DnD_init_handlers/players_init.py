@@ -52,7 +52,7 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
     await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": True})
 
     try:
-        preloader = Preloader(["image"])
+        preloader = Preloader(msg, ["image"])
 
         result = request_to_chatgpt(prompts["extract_hero_data"] % msg.text)
         hero_data = parse_hero_data(result)
@@ -61,7 +61,7 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
             logger.info(f"{lexicon["invalid_hero_data"]}: {msg.text}")
             return
         
-        preloader.update()
+        await preloader.update()
         prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_for_hero"] % result)
         hero_image, error_code, violation_level = get_photo_from_chatgpt(
             content=prompt_for_photo, target_path=f"src/hero_images/{msg.from_user.id}_hero.png"

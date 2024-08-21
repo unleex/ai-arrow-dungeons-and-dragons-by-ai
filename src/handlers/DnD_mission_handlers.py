@@ -40,17 +40,9 @@ async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
         return # don't let user access gpt while already processing
     try:
         await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": True})
-        if "user_msg_id" in ctx:
-            user_msg_id = str(ctx["user_msg_id"])
-            del ctx["user_msg_id"]
-            logger.info(f"found user msg id in ctx: {user_msg_id}")
-        else:
-            user_msg_id = str(msg.from_user.id)
-        if "transcripted" in ctx:
-            topic = ctx["transcripted"]
-            del ctx["transcripted"]
-        else:
-            topic = msg.text
+
+        user_msg_id = str(ctx.pop("user_msg_id",msg.from_user.id))
+        topic = ctx.pop("transcripted", msg.text)
         transcription_addon = lexicon["transcripted"].replace("%s", '')
         topic = topic.replace("/action", '').replace(BOT_USERNAME,'').replace(transcription_addon, '')
         if not topic.replace(' ',''):

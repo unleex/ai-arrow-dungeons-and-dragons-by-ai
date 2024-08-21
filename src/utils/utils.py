@@ -59,7 +59,7 @@ def clear_hero_photos(chat_data: dict):
 
 class Preloader:
 
-    def __init__(self, msg: Message, steps: list[Literal["image", "voice", "lore"]]):
+    def __init__(self, msg: Message, steps: list[Literal["image", "voice", "lore", "plot"]]):
         self._steps = iter(steps)
         self._msg = msg
         self._first = True

@@ -91,7 +91,7 @@ async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, 
 
         preloader = Preloader(clb.message, ["lore", "image", "tts"])
 
-        preloader.update()
+        await preloader.update()
         result = request_to_chatgpt(prompts["DnD_generating_lore"] % chat_data["lore"])
 
         await preloader.update()
