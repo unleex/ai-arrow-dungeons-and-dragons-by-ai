@@ -54,7 +54,7 @@ async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
         transcription_addon = lexicon["transcripted"].replace("%s", '')
         topic = topic.replace("/action", '').replace(BOT_USERNAME,'').replace(transcription_addon, '')
         if not topic.replace(' ',''):
-            await msg.answer(lexicon["action_empty"])   
+            await msg.answer(lexicon["action_empty"])
             await state.set_state(FSMStates.DnD_adding_action)
             return
         await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": True})
@@ -106,7 +106,7 @@ async def adding_action(msg: Message, state: FSMContext, chat_data: dict):
         transcript = openai_client.audio.transcriptions.create(
             file=audio_file,
             model="whisper-1"
-        )   
+        )
         await msg.answer(lexicon["transcripted"] % transcript.text)
         ctx["user_msg_id"] = msg.from_user.id
         ctx["transcripted"] = transcript.text
@@ -134,7 +134,7 @@ async def rolling(clb: CallbackQuery, state: FSMContext, chat_data: dict):
     result = roll - level + mastery
     await sent_msg.edit_text(lexicon["roll_result"].format(
         roll=roll,
-        result=result, 
+        result=result,
         level=level,
         mastery=mastery,
         mastery_type=check_type
@@ -190,12 +190,11 @@ async def master(msg: Message, state: FSMContext, chat_data: dict):
         return
     await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": True})
     await state.set_data(ctx)
-    await msg.answer(lexicon["master_answering"] % chat_data["heroes"][user_msg_id]["name"])
     result = request_to_chatgpt(prompts["DnD_master"].format(
                 phrase=msg.text,
                 recent_actions='\n'.join(
                 chat_data["actions"][-ACTION_RELEVANCE_FOR_MISSION:]),
-                hero_data=chat_data["heroes"][user_msg_id])              
+                hero_data=chat_data["heroes"][user_msg_id])
     )
     await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": False})
     await msg.answer(result)
@@ -213,7 +212,7 @@ async def adding_master(msg: Message, state: FSMContext, chat_data: dict):
         transcript = openai_client.audio.transcriptions.create(
             file=audio_file,
             model="whisper-1"
-        )   
+        )
         await msg.answer(lexicon["transcripted"] % transcript.text)
         ctx["user_msg_id"] = msg.from_user.id
         ctx["transcripted"] = transcript.text
@@ -238,13 +237,13 @@ async def stats(msg: Message, chat_data: dict):
     data.pop("health_diff", None)
     name = data.pop("name", "")
     str_data = '-' * 5 + name + '-' * 5 + '\n'
-    data = data | copied["experience_data"][str(msg.from_user.id)] 
+    data = data | copied["experience_data"][str(msg.from_user.id)]
     data.pop("Сила_experience", None)
     data.pop("Ловкость_experience", None)
     data.pop("Интеллект_experience", None)
-    data.pop("Мудрость_experience", None) 
+    data.pop("Мудрость_experience", None)
     str_data += '\n'.join(f"{stats_lexicon.get(key, key)}: {value}" # default cuz no time to debug
-                          for key, value in data.items()) 
+                          for key, value in data.items())
     photo_path = f"src/hero_images/{msg.from_user.id}_hero.png"
     photo = FSInputFile(photo_path)
     await msg.answer_photo(photo, caption=str_data)
