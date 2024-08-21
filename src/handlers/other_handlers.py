@@ -44,6 +44,12 @@ async def unblock_api_calls(msg: Message, state: FSMContext):
     await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": False})
     await msg.answer(lexicon["unblocked_api_calls"])
 
+
+@rt.message(Command("get_data"))
+async def get_data(msg: Message, state: FSMContext):
+    await msg.answer(str(await state.get_data()))
+
+
 @rt.message(Command("help"))
 async def get_help(msg: Message):
     await msg.answer(lexicon['help_command'])

@@ -7,7 +7,7 @@ from lexicon.lexicon import LEXICON_RU
 from prompts.prompts import PROMPTS_RU
 from prompts.functions import request_to_chatgpt, get_photo_from_chatgpt, tts
 from states.states import FSMStates
-from utils.utils import handle_image_errors, update_preloader
+from utils.utils import handle_image_errors, Preloader
 
 from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
@@ -46,18 +46,22 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, chat
 
         await msg.answer(lexicon["DnD_generating_adventure"])
 
-        preloader = await msg.answer(lexicon["text_preloader"])
+        preloader = Preloader(msg, steps=["lore", "voice", "image"])
+
+        await preloader.update()
         result = request_to_chatgpt(prompts["DnD_generating_lore"] % ctx["topic"])
 
-        preloader = await preloader.edit_text(f"{preloader.text.replace('...', ' ✅')}\n{lexicon['voice_preloader']}")
+        await preloader.update()
         voice = tts(result, ambience_path="src/ambience/anxious.mp3")
 
-        preloader = await preloader.edit_text(f"{preloader.text.replace('...', ' ✅')}\n{lexicon['image_preloader']}")
+        await preloader.update()
         prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_for_photo"] % result)
         photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
+
         if not await handle_image_errors(msg, state, error_code, violation_level):
             return
-        await preloader.edit_text(preloader.text.replace('...', ' ✅'))
+        
+        await preloader.update()
 
         await msg.answer_photo(photo)
         await msg.answer_voice(voice)
@@ -85,17 +89,20 @@ async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, 
         await state.set_data(ctx)
         await clb.message.answer(lexicon["DnD_is_adventure_ok_no"])
 
-        preloader = await clb.message.answer(lexicon["text_preloader"])
-        result = request_to_chatgpt(prompts["DnD_generating_lore"] % chat_data["lore"])
-        preloader = await update_preloader(preloader, lexicon["image_preloader"])
+        preloader = Preloader(clb.message, ["lore", "image", "tts"])
 
+        preloader.update()
+        result = request_to_chatgpt(prompts["DnD_generating_lore"] % chat_data["lore"])
+
+        await preloader.update()
         prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_for_photo"] % result)
         photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
-        await handle_image_errors(clb.message, state, error_code, violation_level)
 
-        preloader = await update_preloader(preloader, lexicon["voice_preloader"])
+        if not await handle_image_errors(clb.message, state, error_code, violation_level):
+            return
+
+        await preloader.update()
         voice = tts(result, ambience_path="src/ambience/anxious.mp3")
-        preloader = await preloader.edit_text(preloader.text.replace('...', ' ✅'))
 
         await clb.message.answer_photo(photo)
         await clb.message.answer_voice(voice)

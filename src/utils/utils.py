@@ -5,6 +5,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from lexicon.lexicon import LEXICON_RU
 from states.states import FSMStates
 
+from typing import Literal
+
 from aiogram.types import Message
 
 
@@ -26,12 +28,6 @@ async def handle_image_errors(message, state, error_code, violation_level):
         await FSMStates.set_chat_data(message.chat.id, {"prompt_sent": False})
         return False
     return True
-
-
-async def update_preloader(preloader: Message, next_step_text):
-    """Обновляет текст прелоадера."""
-    await preloader.edit_text(preloader.text.replace('...', ' ✅') + '\n' + next_step_text)
-    return preloader
 
 
 def parse_hero_data(result):
@@ -59,3 +55,23 @@ def clear_hero_photos(chat_data: dict):
     for user_id in chat_data["users"]:
         if os.path.exists(f"src/hero_images/{user_id}_hero.png"):
             os.remove(f"src/hero_images/{user_id}_hero.png")
+
+
+class Preloader:
+
+    def __init__(self, msg: Message, steps: list[Literal["image", "voice", "lore"]]):
+        self._steps = iter(steps)
+        self._msg = msg
+        self._first = True
+
+    async def update(self):
+        step = next(self._steps, "done")
+        if step == "done":
+            self._msg = await self._msg.edit_text(self._msg.text.replace("...", "✅"))
+            return
+        if self._first:
+            self._msg = await self._msg.answer(lexicon[f"{step}_preloader"])
+            self._first = False
+        else:
+            self._msg = await self._msg.edit_text(self._msg.text.replace("...", "✅") 
+                                                + '\n' + lexicon[f"{step}_preloader"])

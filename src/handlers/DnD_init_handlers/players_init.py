@@ -52,7 +52,8 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
     await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": True})
 
     try:
-        preloader = await msg.answer(lexicon["extracting_hero_data"])
+        preloader = Preloader(["image"])
+
         result = request_to_chatgpt(prompts["extract_hero_data"] % msg.text)
         hero_data = parse_hero_data(result)
         if not hero_data:
@@ -60,16 +61,18 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
             logger.info(f"{lexicon["invalid_hero_data"]}: {msg.text}")
             return
         
-        preloader = await update_preloader(preloader, lexicon["hero_image_preloader"])
+        preloader.update()
         prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_for_hero"] % result)
         hero_image, error_code, violation_level = get_photo_from_chatgpt(
             content=prompt_for_photo, target_path=f"src/hero_images/{msg.from_user.id}_hero.png"
         )
+
         if not await handle_image_errors(msg, state, error_code, violation_level):
             return
+        await preloader.update()
 
-        await preloader.edit_text(preloader.text.replace('...', ' ✅'))
         update_chat_data(chat_data, msg.from_user.id, hero_data)
+
         await msg.answer_photo(hero_image)
 
         if len(chat_data['heroes']) == ctx['number_of_players']:
@@ -87,7 +90,9 @@ async def start_game(msg: Message, chat_data, state: FSMContext):
         await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": True})
 
         await msg.answer(lexicon['game_started'])
-        preloader = await msg.answer(lexicon["generating_starting_location"])
+
+        preloader = Preloader(msg, ["image", "voice"])
+        
         await set_game_menu(msg.chat.id)
 
         data = request_to_chatgpt(prompts["DnD_init_location"] % chat_data["lore"])
@@ -102,15 +107,20 @@ async def start_game(msg: Message, chat_data, state: FSMContext):
         location, explanation = data["location"], data["explanation"]
 
 
-        preloader = await update_preloader(preloader, lexicon["image_preloader"])
+        await preloader.update()
         prompt_for_photo = request_to_chatgpt(content=prompts["extract_prompt_for_photo"] % explanation)
         photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
+
         if not await handle_image_errors(msg, state, error_code, violation_level):
             return
 
-        await preloader.edit_text(preloader.text.replace('...', ' ✅'))
+        await preloader.update()
+        voice = tts(explanation, ambience_path="src/ambience/cheerful.mp3")
+
+        await preloader.update()
+
         await msg.answer_photo(photo)
-        await msg.answer_voice(tts(explanation, ambience_path="src/ambience/cheerful.mp3"))
+        await msg.answer_voice(voice)
         await msg.answer(lexicon["take_action"])
 
         await FSMStates.clear_chat(msg.chat.id)

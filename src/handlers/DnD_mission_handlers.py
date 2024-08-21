@@ -68,7 +68,6 @@ async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
                     hero_data=chat_data["heroes"][user_msg_id])
         )
         await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": False})
-        await state.set_data(ctx)
         ctx["user_msg_id"] = user_msg_id
         ctx["topic"] = topic
         if check_type[:2] == "-1":
@@ -98,8 +97,8 @@ async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
 
 @rt.message(F.text | F.voice, StateFilter(FSMStates.DnD_adding_action))
 async def adding_action(msg: Message, state: FSMContext, chat_data: dict):
-    ctx = await state.get_data()
     if msg.voice:
+        ctx = await state.get_data()
         target_path = "src/audios_for_stt/audio.wav"
         await bot.download(msg.voice, target_path)
         audio_file = open(target_path, "rb")
@@ -217,7 +216,7 @@ async def adding_master(msg: Message, state: FSMContext, chat_data: dict):
         ctx["user_msg_id"] = msg.from_user.id
         ctx["transcripted"] = transcript.text
         await state.set_data(ctx)
-    await state.set_state(eval(ctx["state_before_master"].replace(':','.'))) # avoid infinte cycle
+    await state.set_state(eval(ctx["state_before_master"].replace(':','.'))) # avoid infinte loop
     await master(msg, state, chat_data)
 
 

@@ -5,7 +5,7 @@ from config.config import openai_client
 from lexicon.lexicon import LEXICON_RU
 from prompts.prompts import PROMPTS_RU
 from states.states import FSMStates
-from utils.utils import handle_image_errors, clear_hero_photos, update_preloader
+from utils.utils import handle_image_errors, clear_hero_photos, Preloader
 
 from random import randint
 import requests
@@ -174,15 +174,20 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
             max_tokens=1000
         )
         chat_data["actions"].append(turn_end)
-        preloader = await msg.answer(text=lexicon["voice_preloader"])
+
+        preloader = Preloader(msg, ["voice", "image"])
+
+        await preloader.update()
         voice = tts(turn_end, ambience_path="src/ambience/cheerful.mp3")
-        preloader = await update_preloader(preloader, lexicon["image_preloader"])
+
+        await preloader.update()
         prompt_for_photo = request_to_chatgpt(content=prompts["extract_prompt_for_photo"] % turn_end)
         photo, error_code, violation_level = get_photo_from_chatgpt(content=prompt_for_photo)
-        await preloader.edit_text(preloader.text.replace('...', ' ✅'))
+
         if not await handle_image_errors(msg, state, error_code, violation_level):
             return
-        #await msg.answer(turn_end)
+        await preloader.update()
+        
         await msg.answer_voice(voice)
         await msg.answer_photo(photo)
         await msg.answer(lexicon["take_action"])
