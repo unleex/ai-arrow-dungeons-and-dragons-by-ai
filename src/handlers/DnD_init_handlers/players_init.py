@@ -40,8 +40,10 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
     ctx = await state.get_data()
 
     if str(msg.from_user.id) in chat_data['heroes']:
-        await msg.answer(lexicon['already_in_db'].format(name=msg.from_user.first_name))
-        logger.info(f"{str(msg.from_user.id)} ALREADY IN DATABASE:\n {chat_data["heroes"][str(msg.from_user.id)]}")
+        if not ctx.get("notified", False):
+            await msg.answer(lexicon['already_in_db'].format(name=msg.from_user.first_name))
+            ctx["notified"] = True
+            await state.set_data(ctx)
         return
 
     if ctx.get("prompt_sent", False):
