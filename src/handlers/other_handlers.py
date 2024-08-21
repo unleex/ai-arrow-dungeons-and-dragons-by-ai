@@ -1,12 +1,15 @@
 from keyboards.set_menu import set_main_menu
 from lexicon.lexicon import LEXICON_RU
 from states.states import FSMStates
+from utils.utils import clear_hero_photos
 
 from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import default_state, any_state
 from aiogram.types import Message
+
+
 lexicon = LEXICON_RU
 rt = Router()
 @rt.message(F.chat.type=="private", StateFilter(default_state))
@@ -15,10 +18,11 @@ async def not_in_group_handler(msg: Message):
 
 
 @rt.message(Command("cancel"), StateFilter(any_state))
-async def cancel_handler(msg: Message):
+async def cancel_handler(msg: Message, chat_data: dict):
     await msg.answer(lexicon["cancel_handler"])
     await FSMStates.clear_chat(msg.chat.id)
     await set_main_menu(msg.chat.id)
+    clear_hero_photos(chat_data)
 
 
 @rt.message(Command("set_state"))

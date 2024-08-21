@@ -2,7 +2,6 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 
-from handlers.other_handlers import unblock_api_calls
 from lexicon.lexicon import LEXICON_RU
 from states.states import FSMStates
 
@@ -18,13 +17,13 @@ async def handle_image_errors(message, state, error_code, violation_level):
             await message.answer(lexicon["content_policy_violation_warning"])
         if error_code == 2:
             await message.answer(lexicon["openai_error_warning"])
-            await unblock_api_calls(message, state)
+            await FSMStates.set_chat_data(message.chat.id, {"prompt_sent": False})
             await FSMStates.clear_chat_state(message.chat.id)
             return False
     else:
         await message.answer(lexicon["content_policy_violation_warning"])
         await message.answer(lexicon["content_policy_violation_retries_exhausted"])
-        await unblock_api_calls(message, state)
+        await FSMStates.set_chat_data(message.chat.id, {"prompt_sent": False})
         return False
     return True
 
@@ -55,3 +54,8 @@ def update_chat_data(chat_data, user_id, hero_data):
     chat_data["experience_data"][str(user_id)] = dict(zip(skills, stats)) | dict(zip(skills_exp, exp))
     chat_data['heroes'][str(user_id)] = hero_data
 
+
+def clear_hero_photos(chat_data: dict):
+    for user_id in chat_data["users"]:
+        if os.path.exists(f"src/hero_images/{user_id}_hero.png"):
+            os.remove(f"src/hero_images/{user_id}_hero.png")

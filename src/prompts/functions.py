@@ -3,10 +3,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from config.config import openai_client
 from lexicon.lexicon import LEXICON_RU
-from handlers.other_handlers import unblock_api_calls
 from prompts.prompts import PROMPTS_RU
 from states.states import FSMStates
-from utils.utils import handle_image_errors
+from utils.utils import handle_image_errors, clear_hero_photos
 
 from random import randint
 import requests
@@ -161,6 +160,7 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
         await msg.answer(game_end[1:])
         await msg.answer_voice(voice)
         await FSMStates.clear_chat(msg.chat.id)
+        clear_hero_photos(chat_data)
         return
     states: dict[str, str] = await FSMStates.multiget_states(str(msg.chat.id), chat_data["heroes"])
     if all([st == "FSMStates:" + FSMStates.DnD_took_action._state for st in list(states.values())]):

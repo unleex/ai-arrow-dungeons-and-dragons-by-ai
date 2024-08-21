@@ -7,3 +7,7 @@ dump.rdb
 generated_images/
 .DS_Store
 src/newtest.py
+src/audios_for_stt
+src/generated_audio
+src/db
+src/hero_images

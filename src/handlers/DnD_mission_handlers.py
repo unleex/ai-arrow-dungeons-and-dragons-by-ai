@@ -3,13 +3,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from config.config import bot, BOT_USERNAME, openai_client
 from keyboards.keyboards import roll_kb
-from lexicon.lexicon import LEXICON_RU
-from handlers.other_handlers import unblock_api_calls
+from lexicon.lexicon import LEXICON_RU, STATS_RU
 from prompts.prompts import PROMPTS_RU
 from prompts.functions import (request_to_chatgpt, process_action,tts,
                                finish_action, ACTION_RELEVANCE_FOR_MISSION)
 from states.states import FSMStates
 
+from copy import deepcopy
 import logging
 from random import randint
 
@@ -25,10 +25,14 @@ rt = Router()
 MAX_TOKENS = 1000
 NEW_MISSION_CHANCE = 0.2
 lexicon: dict[str, str] = LEXICON_RU
+stats_lexicon = STATS_RU
 prompts = PROMPTS_RU
 ROLLING_SLEEP_TIME = 3
-required_experience = dict(zip(range(20), [10] * 19 + [float("inf")])) # in every level it is 10, 21+ level is unreachable
-
+reqs = [10]
+for i in range(18):
+    reqs.append(int(reqs[-1] * 1.2))
+required_experience = dict(zip(range(20), reqs + [float("inf")])) # in every level it is 10, 21+ level is unreachable
+print(required_experience)
 
 @rt.message(Command("action"), StateFilter(FSMStates.DnD_taking_action))
 async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
@@ -227,15 +231,22 @@ async def already_took_action(msg: Message, chat_data: dict):
 
 @rt.message(Command("stats"), StateFilter(FSMStates.DnD_taking_action, FSMStates.DnD_took_action))
 async def stats(msg: Message, chat_data: dict):
-    copied = chat_data.copy()
+    copied = deepcopy(chat_data)
     data: dict = copied["heroes"][str(msg.from_user.id)]
+    # avoid bugs if gpt somehow removed the keys
     data.pop("background", None)
     data.pop("backstory", None)
     data.pop("appearance", None)
-    data = data | copied["experience_data"][str(msg.from_user.id)]
-    str_data = '\n'.join(f"{key}: {value}" for key, value in data.items())
+    data.pop("health_diff", None)
+    name = data.pop("name", "")
+    str_data = '-' * 5 + name + '-' * 5 + '\n'
+    data = data | copied["experience_data"][str(msg.from_user.id)] 
+    data.pop("Сила_experience", None)
+    data.pop("Ловкость_experience", None)
+    data.pop("Интеллект_experience", None)
+    data.pop("Мудрость_experience", None) 
+    str_data += '\n'.join(f"{stats_lexicon.get(key, key)}: {value}" # default cuz no time to debug
+                          for key, value in data.items()) 
     photo_path = f"src/hero_images/{msg.from_user.id}_hero.png"
-    print(photo_path)
-    print(str_data)
     photo = FSInputFile(photo_path)
     await msg.answer_photo(photo, caption=str_data)

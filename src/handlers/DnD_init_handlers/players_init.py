@@ -1,6 +1,5 @@
 from keyboards.set_menu import set_game_menu
 from lexicon.lexicon import LEXICON_RU
-from other_handlers import unblock_api_calls
 from prompts.functions import request_to_chatgpt, tts, get_photo_from_chatgpt
 from prompts.prompts import PROMPTS_RU
 from states.states import FSMStates
@@ -95,7 +94,7 @@ async def start_game(msg: Message, chat_data, state: FSMContext):
         try:
             data = eval(data)
         except Exception as e:
-            await unblock_api_calls(msg, state)
+            await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": False})
             print(e, data, sep='\n')
             return
 
