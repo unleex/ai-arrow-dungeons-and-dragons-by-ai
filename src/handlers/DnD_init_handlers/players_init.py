@@ -50,7 +50,6 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
         logger.info(f"{msg.text} BLOCKED")
         return
     await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": True})
-    print(await state.get_data())
 
     try:
         preloader = await msg.answer(lexicon["extracting_hero_data"])

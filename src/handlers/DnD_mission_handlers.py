@@ -32,7 +32,6 @@ reqs = [10]
 for i in range(18):
     reqs.append(int(reqs[-1] * 1.2))
 required_experience = dict(zip(range(20), reqs + [float("inf")])) # in every level it is 10, 21+ level is unreachable
-print(required_experience)
 
 @rt.message(Command("action"), StateFilter(FSMStates.DnD_taking_action))
 async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
@@ -99,6 +98,7 @@ async def taking_action(msg: Message, state: FSMContext, chat_data: dict):
 
 @rt.message(F.text | F.voice, StateFilter(FSMStates.DnD_adding_action))
 async def adding_action(msg: Message, state: FSMContext, chat_data: dict):
+    ctx = await state.get_data()
     if msg.voice:
         target_path = "src/audios_for_stt/audio.wav"
         await bot.download(msg.voice, target_path)
@@ -108,7 +108,6 @@ async def adding_action(msg: Message, state: FSMContext, chat_data: dict):
             model="whisper-1"
         )   
         await msg.answer(lexicon["transcripted"] % transcript.text)
-        ctx = await state.get_data()
         ctx["user_msg_id"] = msg.from_user.id
         ctx["transcripted"] = transcript.text
         await state.set_data(ctx)
@@ -206,6 +205,7 @@ async def master(msg: Message, state: FSMContext, chat_data: dict):
 
 @rt.message(F.text | F.voice, StateFilter(FSMStates.DnD_adding_master))
 async def adding_master(msg: Message, state: FSMContext, chat_data: dict):
+    ctx = await state.get_data()
     if msg.voice:
         target_path = "src/audios_for_stt/audio.wav"
         await bot.download(msg.voice, target_path)
@@ -215,11 +215,9 @@ async def adding_master(msg: Message, state: FSMContext, chat_data: dict):
             model="whisper-1"
         )   
         await msg.answer(lexicon["transcripted"] % transcript.text)
-        ctx = await state.get_data()
         ctx["user_msg_id"] = msg.from_user.id
         ctx["transcripted"] = transcript.text
         await state.set_data(ctx)
-    ctx = await state.get_data()
     await state.set_state(eval(ctx["state_before_master"].replace(':','.'))) # avoid infinte cycle
     await master(msg, state, chat_data)
 
