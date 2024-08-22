@@ -5,7 +5,7 @@ from keyboards.keyboards import DnD_is_adventure_ok_kb
 from keyboards.set_menu import set_main_menu
 from lexicon.lexicon import LEXICON_RU
 from prompts.prompts import PROMPTS_RU
-from prompts.functions import request_to_chatgpt, get_photo_from_chatgpt, tts
+from utils.functions import request_to_chatgpt, get_photo_from_chatgpt, tts
 from states.states import FSMStates
 from utils.utils import handle_image_errors, Preloader
 
@@ -60,7 +60,7 @@ async def DnD_generating_adventure_handler(msg: Message, state: FSMContext, chat
 
         if not await handle_image_errors(msg, state, error_code, violation_level):
             return
-        
+
         await preloader.update()
 
         await msg.answer_photo(photo)
@@ -89,7 +89,7 @@ async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, 
         await state.set_data(ctx)
         await clb.message.answer(lexicon["DnD_is_adventure_ok_no"])
 
-        preloader = Preloader(clb.message, ["lore", "image", "tts"])
+        preloader = Preloader(clb.message, ["lore", "image", "voice"])
 
         await preloader.update()
         result = request_to_chatgpt(prompts["DnD_generating_lore"] % chat_data["lore"])
@@ -103,6 +103,7 @@ async def DnD_is_adventure_ok_no_handler(clb: CallbackQuery, state: FSMContext, 
 
         await preloader.update()
         voice = tts(result, ambience_path="src/ambience/anxious.mp3")
+        await preloader.update()
 
         await clb.message.answer_photo(photo)
         await clb.message.answer_voice(voice)

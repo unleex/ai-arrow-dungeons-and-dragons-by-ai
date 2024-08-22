@@ -59,7 +59,7 @@ def clear_hero_photos(chat_data: dict):
 
 class Preloader:
 
-    def __init__(self, msg: Message, steps: list[Literal["image", "voice", "lore", "plot"]]):
+    def __init__(self, msg: Message, steps: list[Literal["image", "voice", "lore", "plot", "hero_image", "extract_hero", "location"]]):
         self._steps = iter(steps)
         self._msg = msg
         self._first = True
@@ -73,5 +73,5 @@ class Preloader:
             self._msg = await self._msg.answer(lexicon[f"{step}_preloader"])
             self._first = False
         else:
-            self._msg = await self._msg.edit_text(self._msg.text.replace("...", "✅") 
+            self._msg = await self._msg.edit_text(self._msg.text.replace("...", "✅")
                                                 + '\n' + lexicon[f"{step}_preloader"])

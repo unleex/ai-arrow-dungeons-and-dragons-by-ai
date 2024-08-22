@@ -127,9 +127,6 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
         user_id = msg.from_user.id
     user_id = str(user_id)
 
-    preloader = Preloader(msg, ["plot", "voice", "image"])
-
-    await preloader.update()
     updated = request_to_chatgpt(prompts["update_after_action"].format(
         action=topic,
         hero_data=chat_data["heroes"][user_id],
@@ -169,6 +166,10 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
     states: dict[str, str] = await FSMStates.multiget_states(str(msg.chat.id), chat_data["heroes"])
     if all([st == "FSMStates:" + FSMStates.DnD_took_action._state for st in list(states.values())]):
         await msg.answer(lexicon["next_turn"])
+        preloader = Preloader(msg, ["plot", "voice", "image"])
+        
+        await preloader.update()
+
         turn_end = request_to_chatgpt(prompts["next_turn"].format(
             lore=chat_data["lore"],
             recent_actions='\n'.join(
@@ -179,7 +180,7 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
         )
         chat_data["actions"].append(turn_end)
 
-        
+
 
         await preloader.update()
         voice = tts(turn_end, ambience_path="src/ambience/cheerful.mp3")
@@ -191,7 +192,7 @@ async def finish_action(topic, chat_data: dict, msg: Message, state: FSMContext,
         if not await handle_image_errors(msg, state, error_code, violation_level):
             return
         await preloader.update()
-        
+
         await msg.answer_voice(voice)
         await msg.answer_photo(photo)
         await msg.answer(lexicon["take_action"])

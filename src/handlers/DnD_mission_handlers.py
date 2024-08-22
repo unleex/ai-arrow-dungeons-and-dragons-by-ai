@@ -5,7 +5,7 @@ from config.config import bot, BOT_USERNAME, openai_client
 from keyboards.keyboards import roll_kb
 from lexicon.lexicon import LEXICON_RU, STATS_RU
 from prompts.prompts import PROMPTS_RU
-from prompts.functions import (request_to_chatgpt, process_action,tts,
+from utils.functions import (request_to_chatgpt, process_action,tts,
                                finish_action, ACTION_RELEVANCE_FOR_MISSION)
 from states.states import FSMStates
 

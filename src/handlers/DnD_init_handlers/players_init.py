@@ -1,6 +1,6 @@
 from keyboards.set_menu import set_game_menu
 from lexicon.lexicon import LEXICON_RU
-from prompts.functions import request_to_chatgpt, tts, get_photo_from_chatgpt
+from utils.functions import request_to_chatgpt, tts, get_photo_from_chatgpt
 from prompts.prompts import PROMPTS_RU
 from states.states import FSMStates
 from utils.utils import *
@@ -52,15 +52,16 @@ async def get_descriptions(msg: Message, state: FSMContext, chat_data: dict):
     await FSMStates.set_chat_data(msg.chat.id, {"prompt_sent": True})
 
     try:
-        preloader = Preloader(msg, ["image"])
+        preloader = Preloader(msg, ["extract_hero", "hero_image"])
+        await preloader.update()
 
         result = request_to_chatgpt(prompts["extract_hero_data"] % msg.text)
         hero_data = parse_hero_data(result)
         if not hero_data:
             await msg.answer(lexicon["invalid_hero_data"])
-            logger.info(f"{lexicon["invalid_hero_data"]}: {msg.text}")
+            logger.info(f"{lexicon['invalid_hero_data']}: {msg.text}")
             return
-        
+
         await preloader.update()
         prompt_for_photo = request_to_chatgpt(prompts["extract_prompt_for_hero"] % result)
         hero_image, error_code, violation_level = get_photo_from_chatgpt(
@@ -91,9 +92,11 @@ async def start_game(msg: Message, chat_data, state: FSMContext):
 
         await msg.answer(lexicon['game_started'])
 
-        preloader = Preloader(msg, ["image", "voice"])
-        
+        preloader = Preloader(msg, ["location", "image", "voice"])
+
         await set_game_menu(msg.chat.id)
+        
+        await preloader.update()
 
         data = request_to_chatgpt(prompts["DnD_init_location"] % chat_data["lore"])
         data = data[data.find('{'): data.rfind('}') + 1]
